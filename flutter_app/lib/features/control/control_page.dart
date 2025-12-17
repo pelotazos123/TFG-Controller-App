@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
+import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
+import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import '../settings/settings.dart';
 import '../../theme_provider.dart';
 
@@ -15,7 +18,11 @@ class ControlPage extends StatefulWidget {
 class _ControlPageState extends State<ControlPage> {
   Offset _leftJoystick = Offset.zero;  // steering
   Offset _rightJoystick = Offset.zero; // throttle
+
   bool _isLandscapeLocked = false;
+
+  final ControlManager _controlManager = ControlManager.instance;
+
 
   @override
   void initState() {
@@ -54,10 +61,6 @@ class _ControlPageState extends State<ControlPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? Colors.black : Colors.grey[200]!;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final statusColor = isDark ? Colors.green : Colors.green[700]!;
-    final joystickBgColor = isDark ? Colors.grey.shade800 : Colors.grey.shade400;
-    final joystickThumbColor = isDark ? Colors.blue : Colors.blue[700]!;
     
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -81,7 +84,15 @@ class _ControlPageState extends State<ControlPage> {
                           value: _leftJoystick,
                           onChanged: (v) {
                             setState(() => _leftJoystick = v);
-                            print('STEERING - X: ${v.dx.toStringAsFixed(2)}, Y: ${v.dy.toStringAsFixed(2)}');
+
+                            _controlManager.sendJoystick(
+                              _leftJoystick.dx,
+                              _leftJoystick.dy,
+                              _rightJoystick.dx,
+                              _rightJoystick.dy,
+                            );
+
+                            
                           },
                           joystickSize: joystickSize,
                           thumbSize: thumbSize,
@@ -94,7 +105,13 @@ class _ControlPageState extends State<ControlPage> {
                           value: _rightJoystick,
                           onChanged: (v) {
                             setState(() => _rightJoystick = v);
-                            print('THROTTLE - X: ${v.dx.toStringAsFixed(2)}, Y: ${v.dy.toStringAsFixed(2)}');
+
+                            _controlManager.sendJoystick(
+                              _leftJoystick.dx,
+                              _leftJoystick.dy,
+                              _rightJoystick.dx,
+                              _rightJoystick.dy,
+                            );
                           },
                           joystickSize: joystickSize,
                           thumbSize: thumbSize,
@@ -117,14 +134,50 @@ class _ControlPageState extends State<ControlPage> {
   Widget _buildStatusBar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black;
-    final statusColor = isDark ? Colors.green : Colors.green[700]!;
+    final connectedColor = isDark ? Colors.green : Colors.green[700]!;
+    final disconnectedColor = isDark ? Colors.red : Colors.red[700]!;
     
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('CONNECTED', style: TextStyle(color: statusColor)),
+          ListenableBuilder(
+            listenable: _controlManager,
+            builder: (context, _) {
+              final isConnected = _controlManager.isConnected;
+              final transport = _controlManager.transport;
+
+              final connectedIcon = switch (transport) {
+                UdpTransport() => Icons.wifi,
+                BluetoothTransport() => Icons.bluetooth,
+                _ => Icons.link,
+              };
+              final disconnectedIcon = switch (transport) {
+                UdpTransport() => Icons.wifi_off,
+                BluetoothTransport() => Icons.bluetooth_disabled,
+                _ => Icons.link_off,
+              };
+
+              return Row(
+                children: [
+                  Icon(
+                    isConnected ? connectedIcon : disconnectedIcon,
+                    color: isConnected ? connectedColor : disconnectedColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isConnected ? 'CONNECTED' : 'DISCONNECTED',
+                    style: TextStyle(
+                      color: isConnected ? connectedColor : disconnectedColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
           Row(
             children: [
               IconButton(

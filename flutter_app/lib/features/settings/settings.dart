@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
+import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
+import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import '../../theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -12,9 +15,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _ipController = TextEditingController(text: '192.168.4.1');
-  final TextEditingController _portController = TextEditingController(text: '80');
-  
+  final TextEditingController _ipController = TextEditingController(text: '192.168.1.139');
+  final TextEditingController _portController = TextEditingController(text: '4210');
+
+  final ControlManager _controlManager = ControlManager.instance;
+
   String _connectionType = 'WiFi';
   double _deadZone = 0.05;
   int _updateRate = 50;
@@ -29,6 +34,13 @@ class _SettingsPageState extends State<SettingsPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    _controlManager.addListener(_onConnectionChanged);
+  }
+
+  void _onConnectionChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -40,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    _controlManager.removeListener(_onConnectionChanged);
     _ipController.dispose();
     _portController.dispose();
     super.dispose();
@@ -112,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
               keyboardType: TextInputType.number,
             ),
           ),
-          
+
           // Port
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -121,9 +134,98 @@ class _SettingsPageState extends State<SettingsPage> {
               decoration: const InputDecoration(
                 labelText: 'Port',
                 border: OutlineInputBorder(),
-                hintText: '80',
+                hintText: '4210',
               ),
               keyboardType: TextInputType.number,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Connect Button (siempre visible)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _controlManager.isConnected
+                        ? null
+                        : () async {
+                            if (_connectionType == 'WiFi') {
+                              final ip = _ipController.text.trim();
+                              final port =
+                                  int.tryParse(_portController.text.trim()) ?? 4210;
+
+                              if (ip.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Please enter ESP32 IP')),
+                                );
+                                return;
+                              }
+
+                              try {
+                                _controlManager.setTransport(
+                                  UdpTransport(ip: ip, port: port),
+                                );
+                                await _controlManager.connect();
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('UDP Connected')),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text('Failed to connect UDP: $e')),
+                                );
+                              }
+                            } else {
+                              try {
+                                _controlManager.setTransport(BluetoothTransport());
+                                await _controlManager.connect();
+
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Bluetooth Connected')),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'Failed to connect Bluetooth: $e')),
+                                );
+                              }
+                            }
+                          },
+                    child: Text(
+                        _controlManager.isConnected ? 'Connected' : 'Connect'),
+                  ),
+                ),
+                if (_controlManager.isConnected) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () {
+                        _controlManager.disconnect();
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Disconnected')),
+                        );
+                      },
+                      child: const Text('Disconnect'),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
