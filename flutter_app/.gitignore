@@ -36,6 +36,7 @@ migrate_working_dir/
 *.generated_plugin_registrant.*
 generated_plugins/
 .generated/
+.Generated.*/
 
 # Symbolication related
 app.*.symbols

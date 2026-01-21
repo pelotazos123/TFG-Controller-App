@@ -67,6 +67,19 @@ void loop() {
 
     StaticJsonDocument<128> doc;
     if (deserializeJson(doc, packetBuffer) == DeserializationError::Ok) {
+      // Handshake: reply so the app can confirm the ESP32 is actually reachable.
+      const char* msgType = doc["type"];
+      if (msgType && String(msgType) == "hello") {
+        StaticJsonDocument<64> ack;
+        ack["type"] = "hello_ack";
+        char out[64];
+        size_t outLen = serializeJson(ack, out, sizeof(out));
+        udp.beginPacket(udp.remoteIP(), udp.remotePort());
+        udp.write((uint8_t*)out, outLen);
+        udp.endPacket();
+        return;
+      }
+
       tx = doc["tx"];
       ty = doc["ty"];
       sx = doc["sx"];

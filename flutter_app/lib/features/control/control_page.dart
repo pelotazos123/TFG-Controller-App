@@ -245,13 +245,21 @@ class _ControlPageState extends State<ControlPage> {
             final center = Offset(joystickSize / 2, joystickSize / 2);
             final localPosition = details.localPosition;
             final offset = localPosition - center;
-            onChanged(_normalizeFromCenter(offset, translateFactor));
+            onChanged(_normalizeFromCenter(
+              offset,
+              translateFactor,
+              deadZone: _controlManager.deadZone,
+            ));
           },
           onPanUpdate: (details) {
             final center = Offset(joystickSize / 2, joystickSize / 2);
             final localPosition = details.localPosition;
             final offset = localPosition - center;
-            onChanged(_normalizeFromCenter(offset, translateFactor));
+            onChanged(_normalizeFromCenter(
+              offset,
+              translateFactor,
+              deadZone: _controlManager.deadZone,
+            ));
           },
           onPanEnd: (_) {
             onChanged(Offset.zero);
@@ -285,7 +293,11 @@ class _ControlPageState extends State<ControlPage> {
 
   // ---------------- LOGIC ----------------
 
-  Offset _normalizeFromCenter(Offset offset, double maxDistance) {
+  Offset _normalizeFromCenter(
+    Offset offset,
+    double maxDistance, {
+    required double deadZone,
+  }) {
     final distance = offset.distance;
     if (distance == 0) return Offset.zero;
     
@@ -294,10 +306,26 @@ class _ControlPageState extends State<ControlPage> {
     final normalized = offset / distance * limitedDistance;
     
     // Convertir a rango -1.0 a 1.0
-    return Offset(
+    final raw = Offset(
       (normalized.dx / maxDistance).clamp(-1.0, 1.0),
       (normalized.dy / maxDistance).clamp(-1.0, 1.0),
     );
+
+    // Apply dead zone per-axis and rescale remaining range
+    return Offset(
+      _applyDeadZone(raw.dx, deadZone),
+      _applyDeadZone(raw.dy, deadZone),
+    );
+  }
+
+  double _applyDeadZone(double value, double deadZone) {
+    final dz = deadZone.clamp(0.0, 0.999);
+    final absValue = value.abs();
+    if (absValue <= dz) return 0.0;
+
+    // Rescale so output still reaches 1.0 at the edge
+    final scaled = (absValue - dz) / (1.0 - dz);
+    return value.isNegative ? -scaled : scaled;
   }
 
 }

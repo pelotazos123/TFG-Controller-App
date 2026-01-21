@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import 'package:flutter_rccontroller_app/features/control/control_page.dart';
 import 'theme_provider.dart';
 
 class App extends StatefulWidget {
@@ -40,7 +40,7 @@ class _AppState extends State<App> {
         useMaterial3: true,
       ),
       themeMode: _themeProvider.themeMode,
-      home: HomePage(themeProvider: _themeProvider),
+      home: ControlPage(themeProvider: _themeProvider),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
 import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
@@ -22,9 +23,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String _connectionType = 'WiFi';
   double _deadZone = 0.05;
-  int _updateRate = 50;
   bool _reverseThrottle = false;
   bool _reverseSteering = false;
+
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -34,6 +36,10 @@ class _SettingsPageState extends State<SettingsPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    _deadZone = _controlManager.deadZone;
+    _reverseSteering = _controlManager.reverseSteering;
+    _reverseThrottle = _controlManager.reverseThrottle;
 
     _controlManager.addListener(_onConnectionChanged);
   }
@@ -72,13 +78,9 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(height: 32),
           _buildControlSection(),
           const Divider(height: 32),
-          _buildAdvancedSection(),
-          const Divider(height: 32),
           _buildThemeSection(),
           const Divider(height: 32),
           _buildAboutSection(),
-          const SizedBox(height: 24),
-          _buildSaveButton(),
         ],
       ),
     );
@@ -96,7 +98,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const SizedBox(height: 16),
         
-        // Connection Type
         ListTile(
           title: const Text('Connection Type'),
           trailing: DropdownButton<String>(
@@ -111,7 +112,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         
-        // IP Address
         if (_connectionType == 'WiFi') ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -126,7 +126,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // Port
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
@@ -142,16 +141,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 16),
 
-          // Connect Button (siempre visible)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _controlManager.isConnected
+                    onPressed: (_controlManager.isConnected || _isConnecting)
                         ? null
                         : () async {
+                            setState(() => _isConnecting = true);
                             if (_connectionType == 'WiFi') {
                               final ip = _ipController.text.trim();
                               final port =
@@ -162,6 +161,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                   const SnackBar(
                                       content: Text('Please enter ESP32 IP')),
                                 );
+                                if (mounted) {
+                                  setState(() => _isConnecting = false);
+                                }
                                 return;
                               }
 
@@ -180,8 +182,17 @@ class _SettingsPageState extends State<SettingsPage> {
                                 if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content: Text('Failed to connect UDP: $e')),
+                                    content: Text(
+                                      e is TimeoutException
+                                          ? 'UDP connect timeout (no response from ESP32)'
+                                          : 'Failed to connect UDP: $e',
+                                    ),
+                                  ),
                                 );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isConnecting = false);
+                                }
                               }
                             } else {
                               try {
@@ -200,11 +211,36 @@ class _SettingsPageState extends State<SettingsPage> {
                                       content: Text(
                                           'Failed to connect Bluetooth: $e')),
                                 );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isConnecting = false);
+                                }
                               }
                             }
                           },
-                    child: Text(
-                        _controlManager.isConnected ? 'Connected' : 'Connect'),
+                    child: _isConnecting
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Connecting...'),
+                            ],
+                          )
+                        : Text(
+                            _controlManager.isConnected
+                                ? 'Connected'
+                                : 'Connect',
+                          ),
                   ),
                 ),
                 if (_controlManager.isConnected) ...[
@@ -258,6 +294,7 @@ class _SettingsPageState extends State<SettingsPage> {
           label: '${(_deadZone * 100).toStringAsFixed(0)}%',
           onChanged: (value) {
             setState(() => _deadZone = value);
+            _controlManager.setDeadZone(value);
           },
         ),
         
@@ -267,6 +304,7 @@ class _SettingsPageState extends State<SettingsPage> {
           value: _reverseSteering,
           onChanged: (value) {
             setState(() => _reverseSteering = value);
+            _controlManager.setReverseSteering(value);
           },
         ),
         SwitchListTile(
@@ -274,37 +312,7 @@ class _SettingsPageState extends State<SettingsPage> {
           value: _reverseThrottle,
           onChanged: (value) {
             setState(() => _reverseThrottle = value);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAdvancedSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Advanced',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Update Rate
-        ListTile(
-          title: const Text('Update Rate'),
-          subtitle: Text('$_updateRate ms'),
-        ),
-        Slider(
-          value: _updateRate.toDouble(),
-          min: 20,
-          max: 200,
-          divisions: 18,
-          label: '$_updateRate ms',
-          onChanged: (value) {
-            setState(() => _updateRate = value.toInt());
+            _controlManager.setReverseThrottle(value);
           },
         ),
       ],
@@ -408,26 +416,4 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSaveButton() {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
-      ),
-      icon: const Icon(Icons.save),
-      label: const Text(
-        'Save Settings',
-        style: TextStyle(fontSize: 18),
-      ),
-      onPressed: () {
-        // TODO: Save settings to shared preferences
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Settings saved successfully'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        Navigator.pop(context);
-      },
-    );
-  }
 }

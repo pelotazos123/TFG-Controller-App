@@ -22,6 +22,6 @@ class BluetoothTransport implements ControlTransport {
   @override
   void send({required double tx, required double ty, required double sx, required double sy}) {
     if (!_connected) return;
-    final payload = '$tx,$ty,$sx,$sy'; 
+    // TODO: Send payload over Bluetooth.
   }
 }
