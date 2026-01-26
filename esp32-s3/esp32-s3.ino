@@ -14,7 +14,8 @@ void setup() {
 
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
-  activateWIFI_AP();   // arranque por WiFi
+  //activateWIFI_AP();   // arranque por WiFi
+  activateWiFi_STA();
 }
 
 void loop() {
