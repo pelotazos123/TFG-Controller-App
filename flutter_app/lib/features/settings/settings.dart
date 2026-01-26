@@ -16,8 +16,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _ipController = TextEditingController(text: '192.168.1.139');
-  final TextEditingController _portController = TextEditingController(text: '4210');
+  final TextEditingController _ipController = TextEditingController(text: '');
+  final TextEditingController _portController = TextEditingController(text: '');
 
   final ControlManager _controlManager = ControlManager.instance;
 

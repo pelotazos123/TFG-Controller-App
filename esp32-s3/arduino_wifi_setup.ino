@@ -1,102 +1,36 @@
-#include <WiFi.h>
-#include <WiFiUdp.h>
-#include <ArduinoJson.h>
+#include <Arduino.h>
+#include "params.h"
 
-// ================== CONFIG ==================
-//const char* WIFI_SSID = "ESP32_RC";
-//const char* WIFI_PASS = "12345678";
+// Estado global
+Mode currentMode = MODE_BLE;
 
-WiFiUDP udp;
-const int UDP_PORT = 4210;
-
-const unsigned long TIMEOUT_MS = 200;
-// ============================================
-
-const unsigned long FAILSAFE_MS = 200;
-unsigned long lastPacketMs = 0;
-
-// ============================================
-
-char packetBuffer[128];
-
-// Control values
-float tx = 0.0;
-float ty = 0.0;
-float sx = 0.0;
-float sy = 0.0;
-
+// Botón
+bool lastBtnState = HIGH;
+unsigned long lastPressMs = 0;
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // Start WiFi Access Point
-  //WiFi.softAP(WIFI_SSID, WIFI_PASS);
-  //IPAddress ip = WiFi.softAPIP();
-  
-  //Serial.println("ESP32 RC Controller");
-  //Serial.print("AP IP: ");
-  //Serial.println(ip); 
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
 
-  // Connect to House WiFi
-  WiFi.begin(WIFI_SSID, WIFI_PASS); 
-  Serial.print("Conectando a WiFi");
-
-  uint status = WiFi.waitForConnectResult();
-
-  while (status != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("\nWiFi conectado");
-  Serial.print("IP ESP32: ");
-  Serial.print(WiFi.localIP());
-
-  // Start UDP
-  udp.begin(UDP_PORT);
-  Serial.print("\nListening UDP on port: ");
-  Serial.println(UDP_PORT);
+  activateWIFI_AP();   // arranque por WiFi
 }
 
 void loop() {
-  int packetSize = udp.parsePacket();
-  if (packetSize) {
-    int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-    if (len > 0) packetBuffer[len] = 0;
+  bool btnState = digitalRead(PIN_BUTTON);
 
-    StaticJsonDocument<128> doc;
-    if (deserializeJson(doc, packetBuffer) == DeserializationError::Ok) {
-      // Handshake: reply so the app can confirm the ESP32 is actually reachable.
-      const char* msgType = doc["type"];
-      if (msgType && String(msgType) == "hello") {
-        StaticJsonDocument<64> ack;
-        ack["type"] = "hello_ack";
-        char out[64];
-        size_t outLen = serializeJson(ack, out, sizeof(out));
-        udp.beginPacket(udp.remoteIP(), udp.remotePort());
-        udp.write((uint8_t*)out, outLen);
-        udp.endPacket();
-        return;
-      }
-
-      tx = doc["tx"];
-      ty = doc["ty"];
-      sx = doc["sx"];
-      sy = doc["sy"];
-
-      lastPacketMs = millis();
-
-      Serial.printf(
-        "T(%.2f, %.2f) | S(%.2f, %.2f)\n",
-        tx, ty, sx, sy
-      );
+  if (btnState == LOW && lastBtnState == HIGH) {
+    if (millis() - lastPressMs > DEBOUNCE_MS) {
+      if (currentMode == MODE_WIFI_STA || currentMode == MODE_WIFI_AP) activateBLE();
+      else activateWiFi_STA();
+      lastPressMs = millis();
     }
   }
 
-  // Failsafe
-  if (millis() - lastPacketMs > FAILSAFE_MS) {
-    tx = ty = sx = sy = 0.0;
+  lastBtnState = btnState;
+
+  if (currentMode == MODE_WIFI_STA || currentMode == MODE_WIFI_AP) {
+    UDPtransport();
   }
 }
-

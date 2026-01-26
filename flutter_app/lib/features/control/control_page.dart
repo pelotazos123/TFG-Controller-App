@@ -80,7 +80,7 @@ class _ControlPageState extends State<ControlPage> {
                     children: [
                       Expanded(
                         child: _buildJoystick(
-                          label: 'STEERING',
+                          label: 'THROTTLE',
                           value: _leftJoystick,
                           onChanged: (v) {
                             setState(() => _leftJoystick = v);
@@ -101,7 +101,7 @@ class _ControlPageState extends State<ControlPage> {
                       ),
                       Expanded(
                         child: _buildJoystick(
-                          label: 'THROTTLE',
+                          label: 'STEERING',
                           value: _rightJoystick,
                           onChanged: (v) {
                             setState(() => _rightJoystick = v);
