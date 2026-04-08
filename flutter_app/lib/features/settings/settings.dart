@@ -1,14 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
-import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import '../../theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   final ThemeProvider? themeProvider;
-  
+
   const SettingsPage({super.key, this.themeProvider});
 
   @override
@@ -16,8 +15,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _ipController = TextEditingController(text: '');
-  final TextEditingController _portController = TextEditingController(text: '');
+  final TextEditingController _ipController =
+      TextEditingController(text: '192.168.4.1');
+  final TextEditingController _portController =
+      TextEditingController(text: '4210');
 
   final ControlManager _controlManager = ControlManager.instance;
 
@@ -31,34 +32,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    // Forzar orientación vertical
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-
     _deadZone = _controlManager.deadZone;
     _reverseSteering = _controlManager.reverseSteering;
     _reverseThrottle = _controlManager.reverseThrottle;
-
-    _controlManager.addListener(_onConnectionChanged);
-  }
-
-  void _onConnectionChanged() {
-    if (!mounted) return;
-    setState(() {});
   }
 
   @override
   void dispose() {
-    // Restaurar orientaciones permitidas
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    _controlManager.removeListener(_onConnectionChanged);
     _ipController.dispose();
     _portController.dispose();
     super.dispose();
@@ -97,7 +77,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
         ),
         const SizedBox(height: 16),
-        
         ListTile(
           title: const Text('Connection Type'),
           trailing: DropdownButton<String>(
@@ -111,7 +90,6 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
         ),
-        
         if (_connectionType == 'WiFi') ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -125,7 +103,6 @@ class _SettingsPageState extends State<SettingsPage> {
               keyboardType: TextInputType.number,
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
@@ -138,130 +115,113 @@ class _SettingsPageState extends State<SettingsPage> {
               keyboardType: TextInputType.number,
             ),
           ),
-
           const SizedBox(height: 16),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: (_controlManager.isConnected || _isConnecting)
-                        ? null
-                        : () async {
-                            setState(() => _isConnecting = true);
-                            if (_connectionType == 'WiFi') {
-                              final ip = _ipController.text.trim();
-                              final port =
-                                  int.tryParse(_portController.text.trim()) ?? 4210;
+            child: ListenableBuilder(
+              listenable: _controlManager,
+              builder: (context, _) {
+                final isConnected = _controlManager.isConnected;
 
-                              if (ip.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Please enter ESP32 IP')),
-                                );
-                                if (mounted) {
-                                  setState(() => _isConnecting = false);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: (isConnected || _isConnecting)
+                            ? null
+                            : () async {
+                                setState(() => _isConnecting = true);
+                              final messenger = ScaffoldMessenger.of(context);
+
+                                final ip = _ipController.text.trim();
+                                final port = int.tryParse(
+                                      _portController.text.trim(),
+                                    ) ??
+                                    4210;
+
+                                if (ip.isEmpty) {
+                                messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter ESP32 IP'),
+                                    ),
+                                  );
+                                  if (mounted) {
+                                    setState(() => _isConnecting = false);
+                                  }
+                                  return;
                                 }
-                                return;
-                              }
 
-                              try {
-                                _controlManager.setTransport(
-                                  UdpTransport(ip: ip, port: port),
-                                );
-                                await _controlManager.connect();
+                                try {
+                                  _controlManager.setTransport(
+                                    UdpTransport(ip: ip, port: port),
+                                  );
+                                  await _controlManager.connect();
 
-                                if (!mounted) return;
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('UDP Connected')),
-                                );
-                              } catch (e) {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      e is TimeoutException
-                                          ? 'UDP connect timeout (no response from ESP32)'
-                                          : 'Failed to connect UDP: $e',
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('UDP Connected'),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e is TimeoutException
+                                            ? 'UDP connect timeout (no response from ESP32)'
+                                            : 'Failed to connect UDP: $e',
+                                      ),
+                                    ),
+                                  );
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isConnecting = false);
+                                  }
+                                }
+                              },
+                        child: _isConnecting
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
                                     ),
                                   ),
-                                );
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isConnecting = false);
-                                }
-                              }
-                            } else {
-                              try {
-                                _controlManager.setTransport(BluetoothTransport());
-                                await _controlManager.connect();
-
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Bluetooth Connected')),
-                                );
-                              } catch (e) {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          'Failed to connect Bluetooth: $e')),
-                                );
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isConnecting = false);
-                                }
-                              }
-                            }
-                          },
-                    child: _isConnecting
-                        ? Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text('Connecting...'),
-                            ],
-                          )
-                        : Text(
-                            _controlManager.isConnected
-                                ? 'Connected'
-                                : 'Connect',
-                          ),
-                  ),
-                ),
-                if (_controlManager.isConnected) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
+                                  const SizedBox(width: 12),
+                                  const Text('Connecting...'),
+                                ],
+                              )
+                            : Text(isConnected ? 'Connected' : 'Connect'),
                       ),
-                      onPressed: () {
-                        _controlManager.disconnect();
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Disconnected')),
-                        );
-                      },
-                      child: const Text('Disconnect'),
                     ),
-                  ),
-                ],
-              ],
+                    if (isConnected) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                          onPressed: () {
+                            _controlManager.disconnect();
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Disconnected')),
+                            );
+                          },
+                          child: const Text('Disconnect'),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -280,8 +240,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
         ),
         const SizedBox(height: 16),
-        
-        // Dead Zone
         ListTile(
           title: const Text('Joystick Dead Zone'),
           subtitle: Text('${(_deadZone * 100).toStringAsFixed(0)}%'),
@@ -297,8 +255,6 @@ class _SettingsPageState extends State<SettingsPage> {
             _controlManager.setDeadZone(value);
           },
         ),
-        
-        // Reverse Controls
         SwitchListTile(
           title: const Text('Reverse Steering'),
           value: _reverseSteering,
@@ -321,7 +277,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildThemeSection() {
     if (widget.themeProvider == null) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -332,7 +288,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
         ),
         const SizedBox(height: 16),
-        
         ListTile(
           title: const Text('Theme'),
           trailing: DropdownButton<ThemeMode>(
@@ -376,44 +331,38 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
         ),
         const SizedBox(height: 16),
-        
-        ListTile(
-          leading: const Icon(Icons.info_outline),
-          title: const Text('App Name'),
-          subtitle: const Text('RC Controller'),
+        const ListTile(
+          leading: Icon(Icons.info_outline),
+          title: Text('App Name'),
+          subtitle: Text('RC Controller'),
         ),
-        
-        ListTile(
-          leading: const Icon(Icons.tag),
-          title: const Text('Version'),
-          subtitle: const Text('1.0.0'),
+        const ListTile(
+          leading: Icon(Icons.tag),
+          title: Text('Version'),
+          subtitle: Text('1.0.0'),
         ),
-        
-        ListTile(
-          leading: const Icon(Icons.memory),
-          title: const Text('Hardware'),
-          subtitle: const Text('ESP32-S3'),
+        const ListTile(
+          leading: Icon(Icons.memory),
+          title: Text('Hardware'),
+          subtitle: Text('ESP32-S3'),
         ),
-        
-        ListTile(
-          leading: const Icon(Icons.person),
-          title: const Text('Developer'),
-          subtitle: const Text('Pablo Calvo Gamonal'),
+        const ListTile(
+          leading: Icon(Icons.person),
+          title: Text('Developer'),
+          subtitle: Text('Pablo Calvo Gamonal'),
         ),
-        
-        ListTile(
-          leading: const Icon(Icons.info_outline),
-          title: const Text('Organization'),
-          subtitle: const Text('Universidad de Oviedo'),
+        const ListTile(
+          leading: Icon(Icons.info_outline),
+          title: Text('Organization'),
+          subtitle: Text('Universidad de Oviedo'),
         ),
-
-        ListTile(
-          leading: const Icon(Icons.description),
-          title: const Text('Description'),
-          subtitle: const Text('Remote control application for ESP32-S3 based RC vehicles'),
+        const ListTile(
+          leading: Icon(Icons.description),
+          title: Text('Description'),
+          subtitle:
+              Text('Remote control application for ESP32-S3 based RC vehicles'),
         ),
       ],
     );
   }
-
 }

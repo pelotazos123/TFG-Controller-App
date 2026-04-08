@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter/foundation.dart';
 
@@ -6,14 +7,19 @@ class ControlManager extends ChangeNotifier {
 
   static final ControlManager instance = ControlManager._();
 
-  factory ControlManager() => instance;
-
   ControlTransport? _transport;
+  Timer? _sendTimer;
+  bool _lastKnownConnected = false;
 
   double _deadZone = 0.05;
 
   bool _reverseSteering = false;
   bool _reverseThrottle = false;
+
+  double _tx = 0.0;
+  double _ty = 0.0;
+  double _sx = 0.0;
+  double _sy = 0.0;
 
   ControlTransport? get transport => _transport;
 
@@ -45,6 +51,7 @@ class ControlManager extends ChangeNotifier {
 
   void setTransport(ControlTransport transport) {
     _transport = transport;
+    _lastKnownConnected = transport.isConnected;
     notifyListeners();
   }
 
@@ -52,23 +59,69 @@ class ControlManager extends ChangeNotifier {
     final current = _transport;
     if (current == null) return;
     await current.connect();
+    _lastKnownConnected = current.isConnected;
+    
+    _startTimer();
     notifyListeners();
   }
 
   void disconnect() {
+    _stopTimer();
     _transport?.disconnect();
+    _lastKnownConnected = false;
     notifyListeners();
   }
 
   void sendJoystick(double tx, double ty, double sx, double sy) {
+    _tx = tx;
+    _ty = ty;
+    _sx = sx;
+    _sy = sy;
+  }
+
+  void _startTimer() {
+    _stopTimer();
+    _sendTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      _transmitCurrentState();
+    });
+  }
+
+  void _stopTimer() {
+    _sendTimer?.cancel();
+    _sendTimer = null;
+  }
+
+  void _transmitCurrentState() {
     final current = _transport;
-    if (current == null || !current.isConnected) return;
+    if (current == null) {
+      _markDisconnectedIfNeeded();
+      return;
+    }
+
+    final connected = current.isConnected;
+    if (!connected) {
+      _markDisconnectedIfNeeded();
+      return;
+    }
+
+    if (!_lastKnownConnected) {
+      _lastKnownConnected = true;
+      notifyListeners();
+    }
 
     // Steering is the left joystick (tx/ty), throttle is the right joystick (sx/sy).
     // Reverse steering flips the X axis. Reverse throttle flips the Y axis.
-    final outTx = _reverseSteering ? -tx : tx;
-    final outSy = _reverseThrottle ? -sy : sy;
+    final outTx = _reverseSteering ? -_tx : _tx;
+    final outSy = _reverseThrottle ? -_sy : _sy;
 
-    current.send(tx: outTx, ty: ty, sx: sx, sy: outSy);
+    current.send(tx: outTx, ty: _ty, sx: _sx, sy: outSy);
+  }
+
+  void _markDisconnectedIfNeeded() {
+    _stopTimer();
+    if (_lastKnownConnected) {
+      _lastKnownConnected = false;
+      notifyListeners();
+    }
   }
 }

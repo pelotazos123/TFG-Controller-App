@@ -16,10 +16,23 @@ class ControlPage extends StatefulWidget {
 }
 
 class _ControlPageState extends State<ControlPage> {
+  static const _allOrientations = [
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ];
+
+  static const _landscapeOrientations = [
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ];
+
   Offset _leftJoystick = Offset.zero;  // steering
   Offset _rightJoystick = Offset.zero; // throttle
 
   bool _isLandscapeLocked = false;
+  bool _wasConnected = false;
 
   final ControlManager _controlManager = ControlManager.instance;
 
@@ -28,32 +41,40 @@ class _ControlPageState extends State<ControlPage> {
   void initState() {
     super.initState();
     // Permitir todas las orientaciones inicialmente
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    SystemChrome.setPreferredOrientations(_allOrientations);
 
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.immersiveSticky,
     );
+
+    _wasConnected = _controlManager.isConnected;
+    _controlManager.addListener(_onConnectionChanged);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void _onConnectionChanged() {
+    if (!mounted) return;
+
+    final isConnected = _controlManager.isConnected;
+    final currentRoute = ModalRoute.of(context);
+
+    if (_wasConnected && !isConnected && currentRoute?.isCurrent == true) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Connection lost'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+    }
+
+    _wasConnected = isConnected;
   }
 
   @override
   void dispose() {
-    // Restaurar orientaciones permitidas
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    SystemChrome.setPreferredOrientations(_allOrientations);
+    _controlManager.removeListener(_onConnectionChanged);
     super.dispose();
   }
 
@@ -91,8 +112,6 @@ class _ControlPageState extends State<ControlPage> {
                               _rightJoystick.dx,
                               _rightJoystick.dy,
                             );
-
-                            
                           },
                           joystickSize: joystickSize,
                           thumbSize: thumbSize,
@@ -189,17 +208,9 @@ class _ControlPageState extends State<ControlPage> {
                   setState(() {
                     _isLandscapeLocked = !_isLandscapeLocked;
                     if (_isLandscapeLocked) {
-                      SystemChrome.setPreferredOrientations([
-                        DeviceOrientation.landscapeLeft,
-                        DeviceOrientation.landscapeRight,
-                      ]);
+                      SystemChrome.setPreferredOrientations(_landscapeOrientations);
                     } else {
-                      SystemChrome.setPreferredOrientations([
-                        DeviceOrientation.portraitUp,
-                        DeviceOrientation.portraitDown,
-                        DeviceOrientation.landscapeLeft,
-                        DeviceOrientation.landscapeRight,
-                      ]);
+                      SystemChrome.setPreferredOrientations(_allOrientations);
                     }
                   });
                 },
@@ -241,26 +252,18 @@ class _ControlPageState extends State<ControlPage> {
         Text(label, style: TextStyle(color: textColor)),
         const SizedBox(height: 12),
         GestureDetector(
-          onPanStart: (details) {
-            final center = Offset(joystickSize / 2, joystickSize / 2);
-            final localPosition = details.localPosition;
-            final offset = localPosition - center;
-            onChanged(_normalizeFromCenter(
-              offset,
-              translateFactor,
-              deadZone: _controlManager.deadZone,
-            ));
-          },
-          onPanUpdate: (details) {
-            final center = Offset(joystickSize / 2, joystickSize / 2);
-            final localPosition = details.localPosition;
-            final offset = localPosition - center;
-            onChanged(_normalizeFromCenter(
-              offset,
-              translateFactor,
-              deadZone: _controlManager.deadZone,
-            ));
-          },
+          onPanStart: (details) => _handleJoystickPan(
+            localPosition: details.localPosition,
+            joystickSize: joystickSize,
+            translateFactor: translateFactor,
+            onChanged: onChanged,
+          ),
+          onPanUpdate: (details) => _handleJoystickPan(
+            localPosition: details.localPosition,
+            joystickSize: joystickSize,
+            translateFactor: translateFactor,
+            onChanged: onChanged,
+          ),
           onPanEnd: (_) {
             onChanged(Offset.zero);
           },
@@ -293,6 +296,21 @@ class _ControlPageState extends State<ControlPage> {
 
   // ---------------- LOGIC ----------------
 
+  void _handleJoystickPan({
+    required Offset localPosition,
+    required double joystickSize,
+    required double translateFactor,
+    required ValueChanged<Offset> onChanged,
+  }) {
+    final center = Offset(joystickSize / 2, joystickSize / 2);
+    final offset = localPosition - center;
+    onChanged(_normalizeFromCenter(
+      offset,
+      translateFactor,
+      deadZone: _controlManager.deadZone,
+    ));
+  }
+
   Offset _normalizeFromCenter(
     Offset offset,
     double maxDistance, {
@@ -305,13 +323,12 @@ class _ControlPageState extends State<ControlPage> {
     final limitedDistance = distance > maxDistance ? maxDistance : distance;
     final normalized = offset / distance * limitedDistance;
     
-    // Convertir a rango -1.0 a 1.0
+    // Normalize range from -1.0 to 1.0
     final raw = Offset(
       (normalized.dx / maxDistance).clamp(-1.0, 1.0),
       (normalized.dy / maxDistance).clamp(-1.0, 1.0),
     );
 
-    // Apply dead zone per-axis and rescale remaining range
     return Offset(
       _applyDeadZone(raw.dx, deadZone),
       _applyDeadZone(raw.dy, deadZone),

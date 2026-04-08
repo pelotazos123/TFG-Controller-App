@@ -14,8 +14,10 @@ void setup() {
 
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
-  //activateWIFI_AP();   // arranque por WiFi
-  activateWiFi_STA();
+  controlSetup();
+
+  activateWIFI_AP();   // arranque por WiFi
+  //activateWiFi_STA();
 }
 
 void loop() {
@@ -34,4 +36,6 @@ void loop() {
   if (currentMode == MODE_WIFI_STA || currentMode == MODE_WIFI_AP) {
     UDPtransport();
   }
+
+  controlUpdate();
 }

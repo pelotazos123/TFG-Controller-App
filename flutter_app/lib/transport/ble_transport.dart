@@ -1,7 +1,6 @@
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 
 class BluetoothTransport implements ControlTransport {
-  // Aquí guardas tu objeto BluetoothDevice / connection
   bool _connected = false;
 
   @override
