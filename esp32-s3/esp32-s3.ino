@@ -15,6 +15,7 @@ void setup() {
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
   controlSetup();
+  setupGPS();
 
   activateWIFI_AP();   // arranque por WiFi
   //activateWiFi_STA();
@@ -32,6 +33,8 @@ void loop() {
   }
 
   lastBtnState = btnState;
+
+  gpsUpdate();
 
   if (currentMode == MODE_WIFI_STA || currentMode == MODE_WIFI_AP) {
     UDPtransport();

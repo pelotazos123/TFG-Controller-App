@@ -155,82 +155,113 @@ class _ControlPageState extends State<ControlPage> {
     final textColor = isDark ? Colors.white : Colors.black;
     final connectedColor = isDark ? Colors.green : Colors.green[700]!;
     final disconnectedColor = isDark ? Colors.red : Colors.red[700]!;
-    
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ListenableBuilder(
-            listenable: _controlManager,
-            builder: (context, _) {
-              final isConnected = _controlManager.isConnected;
-              final transport = _controlManager.transport;
 
-              final connectedIcon = switch (transport) {
-                UdpTransport() => Icons.wifi,
-                BluetoothTransport() => Icons.bluetooth,
-                _ => Icons.link,
-              };
-              final disconnectedIcon = switch (transport) {
-                UdpTransport() => Icons.wifi_off,
-                BluetoothTransport() => Icons.bluetooth_disabled,
-                _ => Icons.link_off,
-              };
+    return ListenableBuilder(
+      listenable: _controlManager,
+      builder: (context, _) {
+        final isConnected = _controlManager.isConnected;
+        final transport = _controlManager.transport;
+        final gps = _controlManager.gpsTelemetry;
 
-              return Row(
+        final connectedIcon = switch (transport) {
+          UdpTransport() => Icons.wifi,
+          BluetoothTransport() => Icons.bluetooth,
+          _ => Icons.link,
+        };
+        final disconnectedIcon = switch (transport) {
+          UdpTransport() => Icons.wifi_off,
+          BluetoothTransport() => Icons.bluetooth_disabled,
+          _ => Icons.link_off,
+        };
+
+        final gpsColor = gps == null
+          ? textColor.withValues(alpha: 0.8)
+            : (gps.valid ? connectedColor : disconnectedColor);
+
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    isConnected ? connectedIcon : disconnectedIcon,
-                    color: isConnected ? connectedColor : disconnectedColor,
-                    size: 20,
+                  Row(
+                    children: [
+                      Icon(
+                        isConnected ? connectedIcon : disconnectedIcon,
+                        color: isConnected ? connectedColor : disconnectedColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isConnected ? 'CONNECTED' : 'DISCONNECTED',
+                        style: TextStyle(
+                          color: isConnected ? connectedColor : disconnectedColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isConnected ? 'CONNECTED' : 'DISCONNECTED',
-                    style: TextStyle(
-                      color: isConnected ? connectedColor : disconnectedColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _isLandscapeLocked ? Icons.screen_lock_rotation : Icons.screen_rotation,
+                          color: textColor,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isLandscapeLocked = !_isLandscapeLocked;
+                            if (_isLandscapeLocked) {
+                              SystemChrome.setPreferredOrientations(_landscapeOrientations);
+                            } else {
+                              SystemChrome.setPreferredOrientations(_allOrientations);
+                            }
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.settings, color: textColor),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SettingsPage(themeProvider: widget.themeProvider),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
-              );
-            },
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(
-                  _isLandscapeLocked ? Icons.screen_lock_rotation : Icons.screen_rotation,
-                  color: textColor,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isLandscapeLocked = !_isLandscapeLocked;
-                    if (_isLandscapeLocked) {
-                      SystemChrome.setPreferredOrientations(_landscapeOrientations);
-                    } else {
-                      SystemChrome.setPreferredOrientations(_allOrientations);
-                    }
-                  });
-                },
               ),
-              IconButton(
-                icon: Icon(Icons.settings, color: textColor),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SettingsPage(themeProvider: widget.themeProvider),
-                    ),
-                  );
-                },
+              const SizedBox(height: 4),
+              Text(
+                _gpsLabel(gps),
+                style: TextStyle(
+                  color: gpsColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _gpsLabel(GpsTelemetry? gps) {
+    if (gps == null) {
+      return 'GPS: waiting for telemetry...';
+    }
+
+    final state = gps.valid ? 'FIX' : 'NO FIX';
+    final lat = gps.latitude.toStringAsFixed(6);
+    final lon = gps.longitude.toStringAsFixed(6);
+    final speed = gps.speedKmph.toStringAsFixed(1);
+
+    return 'GPS $state | lat: $lat | lon: $lon | sat: ${gps.satellites} | speed: $speed km/h';
   }
 
   Widget _buildJoystick({

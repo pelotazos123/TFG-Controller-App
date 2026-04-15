@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
+import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import 'package:flutter/foundation.dart';
 
 class ControlManager extends ChangeNotifier {
@@ -21,12 +22,15 @@ class ControlManager extends ChangeNotifier {
   double _sx = 0.0;
   double _sy = 0.0;
 
+  GpsTelemetry? _gpsTelemetry;
+
   ControlTransport? get transport => _transport;
 
   double get deadZone => _deadZone;
 
   bool get reverseSteering => _reverseSteering;
   bool get reverseThrottle => _reverseThrottle;
+  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
 
   void setDeadZone(double value) {
     final clamped = value.clamp(0.0, 0.3);
@@ -69,6 +73,7 @@ class ControlManager extends ChangeNotifier {
     _stopTimer();
     _transport?.disconnect();
     _lastKnownConnected = false;
+    _gpsTelemetry = null;
     notifyListeners();
   }
 
@@ -115,6 +120,17 @@ class ControlManager extends ChangeNotifier {
     final outSy = _reverseThrottle ? -_sy : _sy;
 
     current.send(tx: outTx, ty: _ty, sx: _sx, sy: outSy);
+
+    if (current is UdpTransport) {
+      final latestGps = current.gpsTelemetry;
+      if (latestGps != _gpsTelemetry) {
+        _gpsTelemetry = latestGps;
+        notifyListeners();
+      }
+    } else if (_gpsTelemetry != null) {
+      _gpsTelemetry = null;
+      notifyListeners();
+    }
   }
 
   void _markDisconnectedIfNeeded() {

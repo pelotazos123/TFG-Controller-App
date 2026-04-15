@@ -5,6 +5,28 @@ import 'dart:io';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/services/network_binding_service.dart';
 
+class GpsTelemetry {
+  final bool valid;
+  final double latitude;
+  final double longitude;
+  final double altitude;
+  final double speedKmph;
+  final int satellites;
+  final int ageMs;
+  final DateTime receivedAt;
+
+  const GpsTelemetry({
+    required this.valid,
+    required this.latitude,
+    required this.longitude,
+    required this.altitude,
+    required this.speedKmph,
+    required this.satellites,
+    required this.ageMs,
+    required this.receivedAt,
+  });
+}
+
 class UdpTransport implements ControlTransport {
   final String ip;
   final int port;
@@ -16,8 +38,11 @@ class UdpTransport implements ControlTransport {
 
   InternetAddress? _targetAddress;
   int? _targetPort;
+  GpsTelemetry? _gpsTelemetry;
 
   UdpTransport({required this.ip, required this.port});
+
+  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
 
   @override
   bool get isConnected => _initialized;
@@ -62,6 +87,11 @@ class UdpTransport implements ControlTransport {
               _targetPort = dg.port;
               if (!completer.isCompleted) completer.complete();
               return;
+            }
+
+            if (decoded is Map && decoded['type'] == 'gps') {
+              _gpsTelemetry = _parseGpsPacket(decoded);
+              continue;
             }
           } catch (_) {
             // Ignore non-JSON packets.
@@ -113,6 +143,7 @@ class UdpTransport implements ControlTransport {
     _socket = null;
     _initialized = false;
     _targetPort = null;
+    _gpsTelemetry = null;
     
     unawaited(NetworkBindingService.clearBinding());
   }
@@ -149,5 +180,29 @@ class UdpTransport implements ControlTransport {
     } on SocketException {
       disconnect();
     }
+  }
+
+  GpsTelemetry _parseGpsPacket(Map packet) {
+    double toDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0.0;
+    }
+
+    int toInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
+    return GpsTelemetry(
+      valid: packet['valid'] == true,
+      latitude: toDouble(packet['lat']),
+      longitude: toDouble(packet['lon']),
+      altitude: toDouble(packet['alt']),
+      speedKmph: toDouble(packet['speed']),
+      satellites: toInt(packet['sat']),
+      ageMs: toInt(packet['age']),
+      receivedAt: DateTime.now(),
+    );
   }
 }

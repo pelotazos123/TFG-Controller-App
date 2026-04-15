@@ -41,6 +41,12 @@ const int CH_FRONT_RIGHT = 1;
 const int CH_REAR_LEFT = 2;
 const int CH_REAR_RIGHT = 3;
 
+// ========= GPS (NEO-6M) =========
+// GPS TX -> ESP32 RX pin. GPS RX is optional for this project.
+const int GPS_RX_PIN = 16;
+const int GPS_TX_PIN = 17;
+const uint32_t GPS_BAUD = 9600;
+
 // ========= UDP =========
 extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
@@ -63,5 +69,16 @@ enum Mode {
 };
 
 extern Mode currentMode;
+
+// ========= GPS API =========
+void setupGPS();
+void gpsUpdate();
+bool gpsHasValidFix();
+double gpsLatitude();
+double gpsLongitude();
+double gpsAltitudeM();
+double gpsSpeedKmph();
+uint32_t gpsSatellites();
+uint32_t gpsFixAgeMs();
 
 #endif
