@@ -7,15 +7,16 @@ const int PWM_RES = 8;  // 0-255
 const int PWM_MAX = (1 << PWM_RES) - 1;
 
 const float DEADZONE = 0.05f;
-const float MOTOR_OUTPUT_DEADZONE = 0.03f;
+const float MOTOR_OUTPUT_DEADZONE = 0.015f;
 const float MOTOR_SLEW_RATE_PER_SEC = 3.0f;
 const float STRAFE_INPUT_SIGN = -1.0f;
+const float THROTTLE_INPUT_SIGN = -1.0f;
 
 // Use the same startup threshold on all wheels so standstill -> movement
 // happens at the same instant.
-const float START_CMD_ALL = 0.16f;
+const float START_CMD_ALL = 0.20f;
 
-const int MIN_DUTY_ALL = 44;
+const int MIN_DUTY_ALL = 80;
 
 // Motor polarity calibration.
 const float DIR_FRONT_LEFT = 1.0f;
@@ -47,6 +48,14 @@ static float applyOutputDeadzone(float v) {
 
 static float movementPower(float value) {
 	return clamp(fabs(value), 0.0f, 1.0f);
+}
+
+static float applyStartBoost(float v, float startCmd) {
+	float mag = fabs(v);
+	if (mag > 0.0f && mag < startCmd) {
+		return copysign(startCmd, v);
+	}
+	return v;
 }
 
 static void setScaledTargets(
@@ -195,7 +204,7 @@ static void setL298Motor(
 	speed = clamp(speed, -1.0f, 1.0f);
 	float mag = fabs(speed);
 
-	if (mag <= startCmd || speed == 0.0f) {
+	if (mag < startCmd || speed == 0.0f) {
 		digitalWrite(in1, LOW);
 		digitalWrite(in2, LOW);
 		ledcWrite(pwmChannel, 0);
@@ -262,7 +271,7 @@ void controlSetup() {
 // tx = strafe, sy = forward/backward, sx = rotation
 void controlUpdate() {
 	float strafe = applyDeadzone(tx) * STRAFE_INPUT_SIGN;
-	float forward = applyDeadzone(sy);
+	float forward = applyDeadzone(sy) * THROTTLE_INPUT_SIGN;
 	float rotate = applyDeadzone(sx);
 
 	float frontLeft = 0.0f;
@@ -313,6 +322,11 @@ void controlUpdate() {
 	frontRight *= DIR_FRONT_RIGHT;
 	rearLeft *= DIR_REAR_LEFT;
 	rearRight *= DIR_REAR_RIGHT;
+
+	frontLeft = applyStartBoost(frontLeft, START_CMD_ALL);
+	frontRight = applyStartBoost(frontRight, START_CMD_ALL);
+	rearLeft = applyStartBoost(rearLeft, START_CMD_ALL);
+	rearRight = applyStartBoost(rearRight, START_CMD_ALL);
 
 	unsigned long now = millis();
 	float dt = (float)(now - lastControlMs) / 1000.0f;

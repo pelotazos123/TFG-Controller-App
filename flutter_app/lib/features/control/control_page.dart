@@ -640,10 +640,11 @@ class _ControlPageState extends State<ControlPage> {
     final activeColor = isDark ? Colors.blue.shade500 : Colors.blue.shade700;
     const fgColor = Colors.white;
 
-    return GestureDetector(
-      onTapDown: (_) => _setMotionCommand(direction),
-      onTapUp: (_) => _clearMotionCommand(),
-      onTapCancel: _clearMotionCommand,
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => _setMotionCommand(direction),
+      onPointerUp: (_) => _clearMotionCommand(),
+      onPointerCancel: (_) => _clearMotionCommand(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         width: size,
