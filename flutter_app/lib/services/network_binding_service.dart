@@ -6,11 +6,17 @@ class NetworkBindingService {
   static const MethodChannel _channel =
       MethodChannel('flutter_rccontroller_app/network');
 
-  static Future<void> bindToWifi() async {
+  static Future<void> bindToWifi({String? targetHost}) async {
     if (!Platform.isAndroid) return;
 
     try {
-      final ok = await _channel.invokeMethod<bool>('bindToWifi') ?? false;
+      final ok = await _channel.invokeMethod<bool>(
+            'bindToWifi',
+            {
+              'targetHost': targetHost,
+            },
+          ) ??
+          false;
       if (!ok) {
         throw const SocketException('Unable to bind process to Wi-Fi');
       }

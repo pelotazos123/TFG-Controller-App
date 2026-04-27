@@ -61,6 +61,7 @@ void activateBLE() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   udp.stop();
+  udpResetControlEndpoint();
 
   setupBLE();
 

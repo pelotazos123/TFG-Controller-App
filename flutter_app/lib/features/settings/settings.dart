@@ -2,28 +2,34 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
+import 'package:flutter_rccontroller_app/l10n/app_localizations.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
+import '../../locale_provider.dart';
 import '../../theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   final ThemeProvider? themeProvider;
+  final LocaleProvider? localeProvider;
 
-  const SettingsPage({super.key, this.themeProvider});
+  const SettingsPage({super.key, this.themeProvider, this.localeProvider});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _ipController =
-      TextEditingController(text: '192.168.4.1');
-  final TextEditingController _portController =
-      TextEditingController(text: '4210');
+  final TextEditingController _ipController = TextEditingController(
+    text: '192.168.4.1',
+  );
+  final TextEditingController _portController = TextEditingController(
+    text: '4210',
+  );
 
   final ControlManager _controlManager = ControlManager.instance;
 
   String _connectionType = 'WiFi';
   double _deadZone = 0.05;
+  double _driveScale = 1.0;
   bool _reverseThrottle = false;
   bool _reverseSteering = false;
 
@@ -33,6 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _deadZone = _controlManager.deadZone;
+    _driveScale = _controlManager.driveScale;
     _reverseSteering = _controlManager.reverseSteering;
     _reverseThrottle = _controlManager.reverseThrottle;
   }
@@ -46,14 +53,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(localizations?.settings ?? 'Settings'), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildLanguageSection(localizations),
+          const Divider(height: 32),
           _buildConnectionSection(),
           const Divider(height: 32),
           _buildControlSection(),
@@ -66,24 +73,63 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildConnectionSection() {
+  Widget _buildLanguageSection(AppLocalizations? localizations) {
+    Locale currentLocale = widget.localeProvider?.locale ?? Localizations.localeOf(context);
+    String languageCode = currentLocale.languageCode;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Connection',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          localizations?.language ?? 'Language',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ListTile(
-          title: const Text('Connection Type'),
+          title: Text(localizations?.language ?? 'Select Language'),
+          trailing: DropdownButton<String>(
+            value: ['en', 'es'].contains(languageCode) ? languageCode : 'en',
+            items: [
+              DropdownMenuItem(value: 'en', child: Text(localizations?.english ?? 'English')),
+              DropdownMenuItem(value: 'es', child: Text(localizations?.spanish ?? 'Spanish')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                widget.localeProvider?.setLocale(Locale(value));
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectionSection() {
+    final localizations = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          localizations?.connection ?? 'Connection',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          title: Text(localizations?.connectionType ?? 'Connection Type'),
           trailing: DropdownButton<String>(
             value: _connectionType,
-            items: const [
-              DropdownMenuItem(value: 'WiFi', child: Text('WiFi')),
-              DropdownMenuItem(value: 'Bluetooth', child: Text('Bluetooth')),
+            items: [
+              DropdownMenuItem(
+                value: 'WiFi',
+                child: Text(localizations?.wifi ?? 'WiFi'),
+              ),
+              DropdownMenuItem(
+                value: 'Bluetooth',
+                child: Text(localizations?.bluetooth ?? 'Bluetooth'),
+              ),
             ],
             onChanged: (value) {
               setState(() => _connectionType = value ?? 'WiFi');
@@ -95,8 +141,8 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _ipController,
-              decoration: const InputDecoration(
-                labelText: 'ESP32 IP Address',
+              decoration: InputDecoration(
+                labelText: localizations?.esp32IpAddress ?? 'ESP32 IP Address',
                 border: OutlineInputBorder(),
                 hintText: '192.168.4.1',
               ),
@@ -107,8 +153,8 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _portController,
-              decoration: const InputDecoration(
-                labelText: 'Port',
+              decoration: InputDecoration(
+                labelText: localizations?.port ?? 'Port',
                 border: OutlineInputBorder(),
                 hintText: '4210',
               ),
@@ -131,18 +177,20 @@ class _SettingsPageState extends State<SettingsPage> {
                             ? null
                             : () async {
                                 setState(() => _isConnecting = true);
-                              final messenger = ScaffoldMessenger.of(context);
+                                final messenger = ScaffoldMessenger.of(context);
 
                                 final ip = _ipController.text.trim();
-                                final port = int.tryParse(
-                                      _portController.text.trim(),
-                                    ) ??
+                                final port =
+                                    int.tryParse(_portController.text.trim()) ??
                                     4210;
 
                                 if (ip.isEmpty) {
-                                messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please enter ESP32 IP'),
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        localizations?.pleaseEnterEsp32Ip ??
+                                            'Please enter ESP32 IP',
+                                      ),
                                     ),
                                   );
                                   if (mounted) {
@@ -159,8 +207,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
                                   if (!mounted) return;
                                   messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('UDP Connected'),
+                                    SnackBar(
+                                      content: Text(
+                                        localizations?.udpConnected ??
+                                            'UDP Connected',
+                                      ),
                                     ),
                                   );
                                 } catch (e) {
@@ -169,8 +220,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                     SnackBar(
                                       content: Text(
                                         e is TimeoutException
-                                            ? 'UDP connect timeout (no response from ESP32)'
-                                            : 'Failed to connect UDP: $e',
+                                            ? (localizations
+                                                    ?.udpConnectTimeout ??
+                                                'UDP connect timeout (no response from ESP32)')
+                                            : '${localizations?.failedToConnectUdp ?? 'Failed to connect UDP'}: $e',
                                       ),
                                     ),
                                   );
@@ -189,16 +242,23 @@ class _SettingsPageState extends State<SettingsPage> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text('Connecting...'),
+                                  Text(
+                                    localizations?.connecting ??
+                                        'Connecting...',
+                                  ),
                                 ],
                               )
-                            : Text(isConnected ? 'Connected' : 'Connect'),
+                            : Text(
+                                isConnected
+                                    ? (localizations?.connected ?? 'Connected')
+                                    : (localizations?.connect ?? 'Connect'),
+                              ),
                       ),
                     ),
                     if (isConnected) ...[
@@ -206,16 +266,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.error,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
                           ),
                           onPressed: () {
                             _controlManager.disconnect();
                             if (!mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Disconnected')),
+                              SnackBar(
+                                content: Text(
+                                  localizations?.disconnected ??
+                                      'Disconnected',
+                                ),
+                              ),
                             );
                           },
-                          child: const Text('Disconnect'),
+                          child: Text(
+                            localizations?.disconnect ?? 'Disconnect',
+                          ),
                         ),
                       ),
                     ],
@@ -230,18 +299,20 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildControlSection() {
+    final localizations = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Control Settings',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          localizations?.controlSettings ?? 'Control Settings',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ListTile(
-          title: const Text('Joystick Dead Zone'),
+          title: Text(localizations?.joystickDeadZone ?? 'Joystick Dead Zone'),
           subtitle: Text('${(_deadZone * 100).toStringAsFixed(0)}%'),
         ),
         Slider(
@@ -255,8 +326,27 @@ class _SettingsPageState extends State<SettingsPage> {
             _controlManager.setDeadZone(value);
           },
         ),
+        ListTile(
+          title: Text(localizations?.maxDriveSpeed ?? 'Max Drive Speed'),
+          subtitle: Text('${(_driveScale * 100).toStringAsFixed(0)}%'),
+        ),
+        Slider(
+          value: _driveScale,
+          min: 0.2,
+          max: 1.0,
+          divisions: 16,
+          label: '${(_driveScale * 100).toStringAsFixed(0)}%',
+          onChanged: (value) {
+            setState(() => _driveScale = value);
+            _controlManager.setDriveScale(value);
+          },
+        ),
         SwitchListTile(
-          title: const Text('Reverse Steering'),
+          title: Text(localizations?.reverseStrafeX ?? 'Reverse Strafe (X)'),
+          subtitle: Text(
+            localizations?.leftJoystickHorizontalAxis ??
+                'Left joystick horizontal axis',
+          ),
           value: _reverseSteering,
           onChanged: (value) {
             setState(() => _reverseSteering = value);
@@ -264,7 +354,13 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         SwitchListTile(
-          title: const Text('Reverse Throttle'),
+          title: Text(
+            localizations?.reverseForwardBackY ?? 'Reverse Forward/Back (Y)',
+          ),
+          subtitle: Text(
+            localizations?.leftJoystickVerticalAxis ??
+                'Left joystick vertical axis',
+          ),
           value: _reverseThrottle,
           onChanged: (value) {
             setState(() => _reverseThrottle = value);
@@ -278,33 +374,35 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildThemeSection() {
     if (widget.themeProvider == null) return const SizedBox.shrink();
 
+    final localizations = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Appearance',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          localizations?.appearance ?? 'Appearance',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ListTile(
-          title: const Text('Theme'),
+          title: Text(localizations?.theme ?? 'Theme'),
           trailing: DropdownButton<ThemeMode>(
             value: widget.themeProvider!.themeMode,
             underline: const SizedBox(),
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: ThemeMode.system,
-                child: Text('System'),
+                child: Text(localizations?.system ?? 'System'),
               ),
               DropdownMenuItem(
                 value: ThemeMode.light,
-                child: Text('Light'),
+                child: Text(localizations?.light ?? 'Light'),
               ),
               DropdownMenuItem(
                 value: ThemeMode.dark,
-                child: Text('Dark'),
+                child: Text(localizations?.dark ?? 'Dark'),
               ),
             ],
             onChanged: (ThemeMode? mode) {
@@ -321,46 +419,50 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildAboutSection() {
+    final localizations = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'About',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          localizations?.about ?? 'About',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.info_outline),
-          title: Text('App Name'),
-          subtitle: Text('RC Controller'),
+          title: Text(localizations?.appName ?? 'App Name'),
+          subtitle: Text(localizations?.appTitle ?? 'RC Controller'),
         ),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.tag),
-          title: Text('Version'),
-          subtitle: Text('1.0.0'),
+          title: Text(localizations?.version ?? 'Version'),
+          subtitle: const Text('1.0.0'),
         ),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.memory),
-          title: Text('Hardware'),
+          title: Text(localizations?.hardware ?? 'Hardware'),
           subtitle: Text('ESP32-S3'),
         ),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.person),
-          title: Text('Developer'),
+          title: Text(localizations?.developer ?? 'Developer'),
           subtitle: Text('Pablo Calvo Gamonal'),
         ),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.info_outline),
-          title: Text('Organization'),
+          title: Text(localizations?.organization ?? 'Organization'),
           subtitle: Text('Universidad de Oviedo'),
         ),
-        const ListTile(
+        ListTile(
           leading: Icon(Icons.description),
-          title: Text('Description'),
-          subtitle:
-              Text('Remote control application for ESP32-S3 based RC vehicles'),
+          title: Text(localizations?.description ?? 'Description'),
+          subtitle: Text(
+            localizations?.appDescription ??
+                'Remote control application for ESP32-S3 based RC vehicles',
+          ),
         ),
       ],
     );

@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 #include "params.h"
 
-// ========= Definiciones =========
+// ========= WIFI DEF =========
 const char* AP_SSID = "ESP32_RC";
 const char* AP_PASS = "12345678";
 
@@ -22,9 +22,14 @@ void activateWIFI_AP() {
   Serial.print("Clientes conectados: ");
   Serial.println(WiFi.softAPgetStationNum());
 
-  udp.begin(UDP_PORT);
-  Serial.print("UDP escuchando en puerto ");
-  Serial.println(UDP_PORT);
+  udp.stop();
+  udpResetControlEndpoint();
+  if (udp.begin(UDP_PORT)) {
+    Serial.print("UDP escuchando en puerto ");
+    Serial.println(UDP_PORT);
+  } else {
+    Serial.println("ERROR al iniciar UDP en modo AP");
+  }
 
   currentMode = MODE_WIFI_AP;
 }

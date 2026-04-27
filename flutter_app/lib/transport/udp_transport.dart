@@ -51,7 +51,7 @@ class UdpTransport implements ControlTransport {
   Future<void> connect() async {
     if (_initialized) return;
 
-    await NetworkBindingService.bindToWifi();
+    await NetworkBindingService.bindToWifi(targetHost: ip);
 
     final configuredAddress = InternetAddress(ip);
     _targetAddress = configuredAddress;

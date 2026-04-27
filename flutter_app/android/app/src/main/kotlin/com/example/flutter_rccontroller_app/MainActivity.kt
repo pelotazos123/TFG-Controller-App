@@ -1,217 +1,313 @@
 package com.example.flutter_rccontroller_app
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
+import android.net.*
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : FlutterActivity() {
-	private val channelName = "flutter_rccontroller_app/network"
-	private val handler = Handler(Looper.getMainLooper())
 
-	private var wifiCallback: ConnectivityManager.NetworkCallback? = null
-	private var boundNetwork: Network? = null
+    companion object {
+        private const val CHANNEL_NAME = "flutter_rccontroller_app/network"
+        private const val WIFI_BIND_TIMEOUT_MS = 5000L
+    }
 
-	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-		super.configureFlutterEngine(flutterEngine)
+    private val handler = Handler(Looper.getMainLooper())
 
-		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
-			.setMethodCallHandler { call, result ->
-				when (call.method) {
-					"bindToWifi" -> bindToWifi(result)
-					"isWifiBound" -> result.success(isWifiBound())
-					"clearBinding" -> {
-						clearBinding()
-						result.success(true)
-					}
-					else -> result.notImplemented()
-				}
-			}
-	}
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var timeoutRunnable: Runnable? = null
+    private var boundNetwork: Network? = null
 
-	private fun bindToWifi(result: MethodChannel.Result) {
-		val connectivityManager =
-			getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
 
-		clearBinding()
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CHANNEL_NAME
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "bindToWifi" -> bindToWifi(
+                    call.argument<String>("targetHost"),
+                    result
+                )
 
-		val connectedWifi = findConnectedWifiNetwork(connectivityManager)
-		if (connectedWifi != null) {
-			val bound = bindProcessToNetworkCompat(connectivityManager, connectedWifi)
-			if (bound) {
-				boundNetwork = connectedWifi
-				registerWifiLossCallback(connectivityManager)
-				result.success(true)
-				return
-			}
+                "isWifiBound" -> result.success(boundNetwork != null)
 
-			result.error(
-				"WIFI_BIND_FAILED",
-				"Connected Wi-Fi network found but process binding failed",
-				null
-			)
-			return
-		}
+                "clearBinding" -> {
+                    clearBinding()
+                    result.success(true)
+                }
 
-		val requestBuilder = NetworkRequest.Builder()
-			.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                else -> result.notImplemented()
+            }
+        }
+    }
 
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-			requestBuilder.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-		}
+    private fun bindToWifi(targetHost: String?, result: MethodChannel.Result) {
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-		val request = requestBuilder.build()
+        val targetAddress = parseTargetAddress(targetHost)
 
-		val completed = AtomicBoolean(false)
-		lateinit var callback: ConnectivityManager.NetworkCallback
+        val existingWifi = findMatchingWifiNetwork(connectivityManager, targetAddress)
 
-		val timeoutRunnable = Runnable {
-			if (!completed.compareAndSet(false, true)) return@Runnable
-			safeUnregister(connectivityManager, callback)
-			wifiCallback = null
-			result.error("WIFI_BIND_TIMEOUT", "Timed out waiting for a Wi-Fi network", null)
-		}
+        if (existingWifi != null) {
+            if (boundNetwork == existingWifi) {
+                result.success(true)
+                return
+            }
 
-		callback = object : ConnectivityManager.NetworkCallback() {
-			override fun onAvailable(network: Network) {
-				if (!completed.compareAndSet(false, true)) return
-				handler.removeCallbacks(timeoutRunnable)
+            clearBinding()
 
-				val bound = bindProcessToNetworkCompat(connectivityManager, network)
-				if (bound) {
-					boundNetwork = network
-					result.success(true)
-				} else {
-					safeUnregister(connectivityManager, this)
-					wifiCallback = null
-					result.error("WIFI_BIND_FAILED", "Wi-Fi network found but process binding failed", null)
-				}
-			}
+            if (bindProcessToNetworkCompat(connectivityManager, existingWifi)) {
+                boundNetwork = existingWifi
+                result.success(true)
+            } else {
+                result.error(
+                    "WIFI_BIND_FAILED",
+                    "Failed to bind to existing Wi-Fi network",
+                    null
+                )
+            }
 
-			override fun onUnavailable() {
-				if (!completed.compareAndSet(false, true)) return
-				handler.removeCallbacks(timeoutRunnable)
-				safeUnregister(connectivityManager, this)
-				wifiCallback = null
-				result.error("WIFI_UNAVAILABLE", "No Wi-Fi network available to bind", null)
-			}
+            return
+        }
 
-			override fun onLost(network: Network) {
-				if (boundNetwork == network) {
-					bindProcessToNetworkCompat(connectivityManager, null)
-					boundNetwork = null
-				}
-			}
-		}
+        clearBinding()
 
-		wifiCallback = callback
-		try {
-			connectivityManager.requestNetwork(request, callback)
-			handler.postDelayed(timeoutRunnable, 5000)
-		} catch (e: SecurityException) {
-			if (completed.compareAndSet(false, true)) {
-				safeUnregister(connectivityManager, callback)
-				wifiCallback = null
-				result.error("WIFI_PERMISSION_DENIED", e.message, null)
-			}
-		} catch (e: Exception) {
-			if (completed.compareAndSet(false, true)) {
-				safeUnregister(connectivityManager, callback)
-				wifiCallback = null
-				result.error("WIFI_BIND_ERROR", e.message, null)
-			}
-		}
-	}
+        requestWifiNetwork(connectivityManager, targetAddress, result)
+    }
 
-	private fun findConnectedWifiNetwork(connectivityManager: ConnectivityManager): Network? {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			val active = connectivityManager.activeNetwork
-			if (active != null) {
-				val caps = connectivityManager.getNetworkCapabilities(active)
-				if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
-					return active
-				}
-			}
-		}
+    private fun requestWifiNetwork(
+        connectivityManager: ConnectivityManager,
+        targetAddress: InetAddress?,
+        result: MethodChannel.Result
+    ) {
+        val completed = AtomicBoolean(false)
 
-		for (network in connectivityManager.allNetworks) {
-			val caps = connectivityManager.getNetworkCapabilities(network) ?: continue
-			if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-				return network
-			}
-		}
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                }
+            }
+            .build()
 
-		return null
-	}
+        val callback = object : ConnectivityManager.NetworkCallback() {
 
-	private fun registerWifiLossCallback(connectivityManager: ConnectivityManager) {
-		val request = NetworkRequest.Builder()
-			.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-			.build()
+            override fun onAvailable(network: Network) {
+                if (targetAddress != null &&
+                    !networkCanReachTarget(connectivityManager, network, targetAddress)
+                ) {
+                    return
+                }
 
-		val callback = object : ConnectivityManager.NetworkCallback() {
-			override fun onLost(network: Network) {
-				if (boundNetwork == network) {
-					bindProcessToNetworkCompat(connectivityManager, null)
-					boundNetwork = null
-				}
-			}
-		}
+                if (!completed.compareAndSet(false, true)) return
 
-		wifiCallback = callback
-		try {
-			connectivityManager.registerNetworkCallback(request, callback)
-		} catch (_: Exception) {
-			// Keep connection active even if callback registration fails.
-		}
-	}
+                clearTimeout()
 
-	private fun isWifiBound(): Boolean {
-		return boundNetwork != null
-	}
+                if (bindProcessToNetworkCompat(connectivityManager, network)) {
+                    boundNetwork = network
+                    networkCallback = this
+                    result.success(true)
+                } else {
+                    cleanupCallback(connectivityManager, this)
+                    result.error(
+                        "WIFI_BIND_FAILED",
+                        "Wi-Fi found but binding failed",
+                        null
+                    )
+                }
+            }
 
-	private fun clearBinding() {
-		val connectivityManager =
-			getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            override fun onUnavailable() {
+                if (!completed.compareAndSet(false, true)) return
 
-		handler.removeCallbacksAndMessages(null)
-		bindProcessToNetworkCompat(connectivityManager, null)
-		boundNetwork = null
+                clearTimeout()
+                cleanupCallback(connectivityManager, this)
 
-		wifiCallback?.let { callback ->
-			safeUnregister(connectivityManager, callback)
-		}
-		wifiCallback = null
-	}
+                result.error(
+                    "WIFI_UNAVAILABLE",
+                    "No Wi-Fi network available",
+                    null
+                )
+            }
 
-	@Suppress("DEPRECATION")
-	private fun bindProcessToNetworkCompat(
-		connectivityManager: ConnectivityManager,
-		network: Network?
-	): Boolean {
-		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			connectivityManager.bindProcessToNetwork(network)
-		} else {
-			ConnectivityManager.setProcessDefaultNetwork(network)
-		}
-	}
+            override fun onLost(network: Network) {
+                if (network == boundNetwork) {
+                    bindProcessToNetworkCompat(connectivityManager, null)
+                    boundNetwork = null
+                    cleanupCallback(connectivityManager, this)
+                }
+            }
+        }
 
-	private fun safeUnregister(
-		connectivityManager: ConnectivityManager,
-		callback: ConnectivityManager.NetworkCallback
-	) {
-		try {
-			connectivityManager.unregisterNetworkCallback(callback)
-		} catch (_: Exception) {
-			// Ignore stale callback unregistration errors.
-		}
-	}
+        networkCallback = callback
+
+        timeoutRunnable = Runnable {
+            if (!completed.compareAndSet(false, true)) return@Runnable
+
+            cleanupCallback(connectivityManager, callback)
+
+            result.error(
+                "WIFI_BIND_TIMEOUT",
+                "Timed out waiting for Wi-Fi network",
+                null
+            )
+        }
+
+        try {
+            connectivityManager.requestNetwork(request, callback)
+            handler.postDelayed(timeoutRunnable!!, WIFI_BIND_TIMEOUT_MS)
+
+        } catch (e: SecurityException) {
+            cleanupCallback(connectivityManager, callback)
+            result.error("WIFI_PERMISSION_DENIED", e.message, null)
+
+        } catch (e: Exception) {
+            cleanupCallback(connectivityManager, callback)
+            result.error("WIFI_BIND_ERROR", e.message, null)
+        }
+    }
+
+    private fun findMatchingWifiNetwork(
+        connectivityManager: ConnectivityManager,
+        targetAddress: InetAddress?
+    ): Network? {
+        return connectivityManager.allNetworks.firstOrNull { network ->
+            isUsableWifiNetwork(connectivityManager, network) &&
+                    (targetAddress == null ||
+                            networkCanReachTarget(connectivityManager, network, targetAddress))
+        }
+    }
+
+    private fun isUsableWifiNetwork(
+        connectivityManager: ConnectivityManager,
+        network: Network
+    ): Boolean {
+        val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
+        if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return false
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+            !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+        ) {
+            return false
+        }
+
+        val linkProperties =
+            connectivityManager.getLinkProperties(network) ?: return false
+
+        return linkProperties.linkAddresses.isNotEmpty()
+    }
+
+    private fun networkCanReachTarget(
+        connectivityManager: ConnectivityManager,
+        network: Network,
+        targetAddress: InetAddress
+    ): Boolean {
+        val linkProperties =
+            connectivityManager.getLinkProperties(network) ?: return false
+
+        if (linkProperties.routes.any { it.matches(targetAddress) }) {
+            return true
+        }
+
+        return linkProperties.linkAddresses.any { linkAddress ->
+            val localAddress = linkAddress.address
+
+            localAddress.javaClass == targetAddress.javaClass &&
+                    isSameSubnet(
+                        localAddress,
+                        targetAddress,
+                        linkAddress.prefixLength
+                    )
+        }
+    }
+
+    private fun isSameSubnet(
+        localAddress: InetAddress,
+        targetAddress: InetAddress,
+        prefixLength: Int
+    ): Boolean {
+        val localBytes = localAddress.address
+        val targetBytes = targetAddress.address
+
+        if (localBytes.size != targetBytes.size) return false
+
+        val fullBytes = prefixLength / 8
+        val remainingBits = prefixLength % 8
+
+        for (i in 0 until fullBytes) {
+            if (localBytes[i] != targetBytes[i]) return false
+        }
+
+        if (remainingBits == 0) return true
+
+        val mask = (0xFF shl (8 - remainingBits)) and 0xFF
+
+        return (localBytes[fullBytes].toInt() and mask) ==
+                (targetBytes[fullBytes].toInt() and mask)
+    }
+
+    private fun parseTargetAddress(targetHost: String?): InetAddress? {
+        if (targetHost.isNullOrBlank()) return null
+
+        return runCatching {
+            InetAddress.getByName(targetHost)
+        }.getOrNull()
+    }
+
+    private fun clearBinding() {
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        clearTimeout()
+
+        bindProcessToNetworkCompat(connectivityManager, null)
+        boundNetwork = null
+
+        networkCallback?.let {
+            cleanupCallback(connectivityManager, it)
+        }
+
+        networkCallback = null
+    }
+
+    private fun clearTimeout() {
+        timeoutRunnable?.let(handler::removeCallbacks)
+        timeoutRunnable = null
+    }
+
+    @Suppress("DEPRECATION")
+    private fun bindProcessToNetworkCompat(
+        connectivityManager: ConnectivityManager,
+        network: Network?
+    ): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            connectivityManager.bindProcessToNetwork(network)
+        } else {
+            ConnectivityManager.setProcessDefaultNetwork(network)
+        }
+    }
+
+    private fun cleanupCallback(
+        connectivityManager: ConnectivityManager,
+        callback: ConnectivityManager.NetworkCallback
+    ) {
+        try {
+            connectivityManager.unregisterNetworkCallback(callback)
+        } catch (_: Exception) {
+        }
+
+        if (networkCallback == callback) {
+            networkCallback = null
+        }
+    }
 }

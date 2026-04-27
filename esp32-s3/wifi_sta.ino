@@ -15,6 +15,8 @@ void activateWiFi_STA() {
     Serial.print(".");
     if (millis() - t0 > 8000) {
       Serial.println("\nNo se pudo conectar");
+      Serial.println("Volviendo a modo AP para control UDP...");
+      activateWIFI_AP();
       return;
     }
   }
@@ -23,9 +25,14 @@ void activateWiFi_STA() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  udp.begin(UDP_PORT);
-  Serial.print("UDP escuchando en ");
-  Serial.println(UDP_PORT);
+  udp.stop();
+  udpResetControlEndpoint();
+  if (udp.begin(UDP_PORT)) {
+    Serial.print("UDP escuchando en ");
+    Serial.println(UDP_PORT);
+  } else {
+    Serial.println("ERROR al iniciar UDP en modo STA");
+  }
 
   currentMode = MODE_WIFI_STA;
 }

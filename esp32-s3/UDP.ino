@@ -3,7 +3,7 @@
 unsigned long lastPacketMs = 0;
 WiFiUDP udp;
 
-char packetBuffer[128];
+char packetBuffer[256];
 float tx = 0, ty = 0, sx = 0, sy = 0;
 
 static IPAddress controlEndpointIp;
@@ -11,6 +11,16 @@ static uint16_t controlEndpointPort = 0;
 static bool hasControlEndpoint = false;
 static unsigned long lastGpsSendMs = 0;
 static const unsigned long GPS_SEND_MS = 1000;
+static const bool LOG_CONTROL_PACKETS = true;
+static const bool LOG_UDP_EVENTS = true;
+
+void udpResetControlEndpoint() {
+  controlEndpointIp = IPAddress();
+  controlEndpointPort = 0;
+  hasControlEndpoint = false;
+  lastGpsSendMs = 0;
+  lastPacketMs = 0;
+}
 
 static void updateControlEndpoint() {
   controlEndpointIp = udp.remoteIP();
@@ -43,13 +53,24 @@ static void sendGpsTelemetryIfDue() {
 }
 
 void UDPtransport() {
-  int packetSize = udp.parsePacket();
-  if (packetSize) {
+  int packetSize = 0;
+  while ((packetSize = udp.parsePacket()) > 0) {
+    if (LOG_UDP_EVENTS) {
+      Serial.printf(
+        "UDP RX %d bytes from %s:%u\n",
+        packetSize,
+        udp.remoteIP().toString().c_str(),
+        udp.remotePort()
+      );
+    }
+
     int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-    if (len > 0) packetBuffer[len] = 0;
+    if (len <= 0) continue;
+    packetBuffer[len] = 0;
 
     StaticJsonDocument<128> doc;
-    if (deserializeJson(doc, packetBuffer) == DeserializationError::Ok) {
+    DeserializationError err = deserializeJson(doc, packetBuffer);
+    if (err == DeserializationError::Ok) {
       const char* msgType = doc["type"];
       if (msgType && String(msgType) == "hello") {
         updateControlEndpoint();
@@ -61,7 +82,14 @@ void UDPtransport() {
         udp.beginPacket(udp.remoteIP(), udp.remotePort());
         udp.write((uint8_t*)out, outLen);
         udp.endPacket();
-        return;
+        if (LOG_UDP_EVENTS) {
+          Serial.printf(
+            "hello -> hello_ack hacia %s:%u\n",
+            udp.remoteIP().toString().c_str(),
+            udp.remotePort()
+          );
+        }
+        continue;
       }
 
 
@@ -70,14 +98,18 @@ void UDPtransport() {
       sx = doc["sx"] | 0.0;
       sy = doc["sy"] | 0.0;
 
-  updateControlEndpoint();
+      updateControlEndpoint();
 
       lastPacketMs = millis();
 
-      Serial.printf(
-        "T(%.2f, %.2f) | S(%.2f, %.2f)\n",
-        tx, ty, sx, sy
-      );
+      if (LOG_CONTROL_PACKETS) {
+        Serial.printf(
+          "T(%.2f, %.2f) | S(%.2f, %.2f)\n",
+          tx, ty, sx, sy
+        );
+      }
+    } else if (LOG_UDP_EVENTS) {
+      Serial.printf("UDP JSON invalido: %s | raw: %s\n", err.c_str(), packetBuffer);
     }
   }
 

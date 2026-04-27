@@ -10,8 +10,6 @@
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
 
-#define PIN_BUTTON 17
-
 // ============================================================
 // L298N Motor Driver Setup (2 drivers for 4 motors)
 // Each L298N controls 2 motors via ENA/ENB (PWM) and IN1-IN4.
@@ -42,19 +40,18 @@ const int CH_REAR_LEFT = 2;
 const int CH_REAR_RIGHT = 3;
 
 // ========= GPS (NEO-6M) =========
-// GPS TX -> ESP32 RX pin. GPS RX is optional for this project.
 const int GPS_RX_PIN = 16;
-const int GPS_TX_PIN = 17;
+const int GPS_TX_PIN = 18;
 const uint32_t GPS_BAUD = 9600;
 
 // ========= UDP =========
 extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
+void udpResetControlEndpoint();
 
 // ========= Timing =========
-extern const unsigned long DEBOUNCE_MS = 250;
 extern const unsigned long TIMEOUT_MS = 200;
-extern const unsigned long FAILSAFE_MS = 200;
+extern const unsigned long FAILSAFE_MS = 300;
 
 // ========= Joystick =========
 extern float tx;
