@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
-import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
+import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
+import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
 import 'package:flutter/foundation.dart';
 
 enum MotionCommand {
@@ -24,8 +25,8 @@ class ControlManager extends ChangeNotifier {
   ControlTransport? _transport;
   Timer? _sendTimer;
   bool _lastKnownConnected = false;
+  int _lastSendMs = 0;
 
-  double _deadZone = 0.05;
   double _driveScale = 1.0;
 
   bool _reverseSteering = false;
@@ -41,19 +42,11 @@ class ControlManager extends ChangeNotifier {
 
   ControlTransport? get transport => _transport;
 
-  double get deadZone => _deadZone;
   double get driveScale => _driveScale;
 
   bool get reverseSteering => _reverseSteering;
   bool get reverseThrottle => _reverseThrottle;
   GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
-
-  void setDeadZone(double value) {
-    final clamped = value.clamp(0.0, 0.3);
-    if (_deadZone == clamped) return;
-    _deadZone = clamped;
-    notifyListeners();
-  }
 
   void setDriveScale(double value) {
     final clamped = value.clamp(0.2, 1.0);
@@ -96,15 +89,22 @@ class ControlManager extends ChangeNotifier {
     _stopTimer();
     _transport?.disconnect();
     _lastKnownConnected = false;
+    _lastSendMs = 0;
     _activeMotion = null;
     _gpsTelemetry = null;
     notifyListeners();
+  }
+
+  void pauseSending() {
+    _stopTimer();
+    _lastSendMs = 0;
   }
 
   void sendJoystick(double tx, double ty, double sx, double sy) {
     _tx = tx;
     _ty = ty;
     _sx = sx;
+    _transmitCurrentState();
   }
 
   void setMotionCommand(MotionCommand? direction, {double power = 1.0}) {
@@ -114,11 +114,12 @@ class ControlManager extends ChangeNotifier {
     }
     _activeMotion = direction;
     _activeMotionPower = clampedPower;
+    _transmitCurrentState();
   }
 
   void _startTimer() {
     _stopTimer();
-    _sendTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+    _sendTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
       _transmitCurrentState();
     });
   }
@@ -145,6 +146,13 @@ class ControlManager extends ChangeNotifier {
       _lastKnownConnected = true;
       notifyListeners();
     }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final minInterval = _minSendIntervalMs(current);
+    if (minInterval > 0 && nowMs - _lastSendMs < minInterval) {
+      return;
+    }
+    _lastSendMs = nowMs;
 
     double outTx;
     double outSy;
@@ -222,16 +230,18 @@ class ControlManager extends ChangeNotifier {
 
     current.send(tx: outTx, ty: 0.0, sx: outSx, sy: outSy);
 
-    if (current is UdpTransport) {
-      final latestGps = current.gpsTelemetry;
-      if (latestGps != _gpsTelemetry) {
-        _gpsTelemetry = latestGps;
-        notifyListeners();
-      }
-    } else if (_gpsTelemetry != null) {
-      _gpsTelemetry = null;
+    final latestGps = current.gpsTelemetry;
+    if (latestGps != _gpsTelemetry) {
+      _gpsTelemetry = latestGps;
       notifyListeners();
     }
+  }
+
+  int _minSendIntervalMs(ControlTransport transport) {
+    if (transport is BleTransport) {
+      return 40;
+    }
+    return 0;
   }
 
   void _markDisconnectedIfNeeded() {

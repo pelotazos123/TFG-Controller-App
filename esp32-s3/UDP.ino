@@ -11,8 +11,8 @@ static uint16_t controlEndpointPort = 0;
 static bool hasControlEndpoint = false;
 static unsigned long lastGpsSendMs = 0;
 static const unsigned long GPS_SEND_MS = 1000;
-static const bool LOG_CONTROL_PACKETS = true;
-static const bool LOG_UDP_EVENTS = true;
+static const bool LOG_CONTROL_PACKETS = false;
+static const bool LOG_UDP_EVENTS = false;
 
 void udpResetControlEndpoint() {
   controlEndpointIp = IPAddress();
@@ -74,6 +74,9 @@ void UDPtransport() {
       const char* msgType = doc["type"];
       if (msgType && String(msgType) == "hello") {
         updateControlEndpoint();
+        if (currentMode == MODE_WIFI_AP) {
+          noteModeActivity(currentMode);
+        }
 
         StaticJsonDocument<64> ack;
         ack["type"] = "hello_ack";
@@ -92,11 +95,29 @@ void UDPtransport() {
         continue;
       }
 
+      if (msgType && String(msgType) == "set_mode") {
+        const char* modeValue = doc["mode"];
+        const char* ssid = doc["ssid"];
+        const char* pass = doc["pass"];
+        requestModeChange(modeValue, ssid, pass);
+        continue;
+      }
+
+      if (msgType && String(msgType) == "set_main_mode") {
+        const char* modeValue = doc["mode"];
+        const char* ssid = doc["ssid"];
+        const char* pass = doc["pass"];
+        requestMainModeChange(modeValue, ssid, pass);
+        continue;
+      }
 
       tx = doc["tx"] | 0.0;
       ty = doc["ty"] | 0.0;
       sx = doc["sx"] | 0.0;
       sy = doc["sy"] | 0.0;
+      if (currentMode == MODE_WIFI_AP) {
+        noteModeActivity(currentMode);
+      }
 
       updateControlEndpoint();
 

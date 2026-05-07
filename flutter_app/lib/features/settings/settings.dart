@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
 import 'package:flutter_rccontroller_app/l10n/app_localizations.dart';
+import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
+import 'package:flutter_rccontroller_app/transport/control_transport.dart';
+import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import '../../locale_provider.dart';
 import '../../theme_provider.dart';
@@ -18,6 +24,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _mainModeKey = 'main_mode';
+  static const String _bluetoothReminderKey = 'bluetooth_reminder_skip';
   final TextEditingController _ipController = TextEditingController(
     text: '192.168.4.1',
   );
@@ -27,21 +35,64 @@ class _SettingsPageState extends State<SettingsPage> {
 
   final ControlManager _controlManager = ControlManager.instance;
 
-  String _connectionType = 'WiFi';
-  double _deadZone = 0.05;
+  ControllerMode _mainMode = ControllerMode.wifiAp;
+  ControllerMode _connectionMode = ControllerMode.wifiAp;
+  ControllerMode? _activeMode;
   double _driveScale = 1.0;
   bool _reverseThrottle = false;
   bool _reverseSteering = false;
+  bool _skipBluetoothReminder = false;
 
   bool _isConnecting = false;
+
+  bool _matchesSelectedMode(ControlTransport? transport) {
+    final resolved = _resolveActiveMode(transport);
+    if (resolved != null) return _connectionMode == resolved;
+
+    if (transport is UdpTransport) {
+      return _connectionMode == ControllerMode.wifiAp;
+    }
+    if (transport is BleTransport) {
+      return _connectionMode == ControllerMode.ble;
+    }
+    return false;
+  }
+
+  ControllerMode? _resolveActiveMode(ControlTransport? transport) {
+    if (_activeMode != null) return _activeMode;
+    if (transport is BleTransport) return ControllerMode.ble;
+    if (transport is UdpTransport) return ControllerMode.wifiAp;
+    return null;
+  }
+
+  bool _isMainMode(ControllerMode mode) {
+    return mode == _mainMode;
+  }
+
+  String _shortModeLabel(ControllerMode mode) {
+    switch (mode) {
+      case ControllerMode.wifiAp:
+        return 'AP';
+      case ControllerMode.ble:
+        return 'BLE';
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _deadZone = _controlManager.deadZone;
     _driveScale = _controlManager.driveScale;
     _reverseSteering = _controlManager.reverseSteering;
     _reverseThrottle = _controlManager.reverseThrottle;
+
+    _loadMainMode();
+    _loadBluetoothReminderPreference();
+
+    final active = _resolveActiveMode(_controlManager.transport);
+    if (active != null) {
+      _activeMode = active;
+      _connectionMode = active;
+    }
   }
 
   @override
@@ -49,6 +100,67 @@ class _SettingsPageState extends State<SettingsPage> {
     _ipController.dispose();
     _portController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMainMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_mainModeKey);
+    final resolved = raw == null ? _mainMode : _modeFromPrefs(raw);
+
+    if (!mounted) return;
+    setState(() {
+      _mainMode = resolved;
+      if (!_controlManager.isConnected) {
+        _connectionMode = resolved;
+      }
+    });
+  }
+
+  Future<void> _loadBluetoothReminderPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final skip = prefs.getBool(_bluetoothReminderKey) ?? false;
+    if (!mounted) return;
+    setState(() => _skipBluetoothReminder = skip);
+  }
+
+  Future<void> _persistBluetoothReminderPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_bluetoothReminderKey, value);
+    if (!mounted) return;
+    setState(() => _skipBluetoothReminder = value);
+  }
+
+  Future<void> _persistMainMode(ControllerMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_mainModeKey, _modeToPrefs(mode));
+  }
+
+  Future<void> _setMainMode(ControllerMode mode) async {
+    setState(() {
+      _mainMode = mode;
+    });
+    await _persistMainMode(mode);
+
+    final transport = _controlManager.transport;
+    if (transport == null || !transport.isConnected) return;
+    try {
+      await transport.sendMainModeCommand(mode);
+    } catch (_) {
+      // Ignore failures when persisting main mode to the controller.
+    }
+  }
+
+  String _modeToPrefs(ControllerMode mode) => controllerModeToPayload(mode);
+
+  ControllerMode _modeFromPrefs(String raw) {
+    switch (raw) {
+      case 'wifi_ap':
+        return ControllerMode.wifiAp;
+      case 'ble':
+        return ControllerMode.ble;
+      default:
+        return ControllerMode.wifiAp;
+    }
   }
 
   @override
@@ -106,6 +218,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildConnectionSection() {
     final localizations = AppLocalizations.of(context);
+    final isMainSelected = _connectionMode == _mainMode;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,24 +232,34 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 16),
         ListTile(
           title: Text(localizations?.connectionType ?? 'Connection Type'),
-          trailing: DropdownButton<String>(
-            value: _connectionType,
+          trailing: DropdownButton<ControllerMode>(
+            value: _connectionMode,
             items: [
               DropdownMenuItem(
-                value: 'WiFi',
-                child: Text(localizations?.wifi ?? 'WiFi'),
+                value: ControllerMode.wifiAp,
+                child: Text(localizations?.wifiAp ?? 'WiFi AP'),
               ),
               DropdownMenuItem(
-                value: 'Bluetooth',
-                child: Text(localizations?.bluetooth ?? 'Bluetooth'),
+                value: ControllerMode.ble,
+                child: Text(localizations?.bluetoothLe ?? 'Bluetooth LE'),
               ),
             ],
-            onChanged: (value) {
-              setState(() => _connectionType = value ?? 'WiFi');
+            onChanged: (value) async {
+              if (value == null) return;
+              setState(() => _connectionMode = value);
             },
           ),
         ),
-        if (_connectionType == 'WiFi') ...[
+        SwitchListTile(
+          title: const Text('Main mode'),
+          subtitle: const Text('Use selected mode on next startup'),
+          value: isMainSelected,
+          onChanged: (value) async {
+            if (!value || isMainSelected) return;
+            await _setMainMode(_connectionMode);
+          },
+        ),
+        if (_connectionMode == ControllerMode.wifiAp) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
@@ -161,56 +284,45 @@ class _SettingsPageState extends State<SettingsPage> {
               keyboardType: TextInputType.number,
             ),
           ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ListenableBuilder(
-              listenable: _controlManager,
-              builder: (context, _) {
-                final isConnected = _controlManager.isConnected;
+        ],
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ListenableBuilder(
+            listenable: _controlManager,
+            builder: (context, _) {
+              final isConnected = _controlManager.isConnected;
+              final activeMode = _resolveActiveMode(_controlManager.transport);
+              final matchesMode = _matchesSelectedMode(
+                _controlManager.transport,
+              );
+              final showChangeMode =
+                  isConnected && activeMode != null && activeMode != _connectionMode;
+              final canConnect =
+                  !_isConnecting && (!isConnected || !matchesMode);
+              final disconnectLabel = activeMode != null
+                  ? '${localizations?.disconnect ?? 'Disconnect'} ${_shortModeLabel(activeMode)}'
+                  : (localizations?.disconnect ?? 'Disconnect');
 
+              if (showChangeMode) {
                 return Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: (isConnected || _isConnecting)
+                        onPressed: _isConnecting
                             ? null
                             : () async {
                                 setState(() => _isConnecting = true);
                                 final messenger = ScaffoldMessenger.of(context);
 
-                                final ip = _ipController.text.trim();
-                                final port =
-                                    int.tryParse(_portController.text.trim()) ??
-                                    4210;
-
-                                if (ip.isEmpty) {
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        localizations?.pleaseEnterEsp32Ip ??
-                                            'Please enter ESP32 IP',
-                                      ),
-                                    ),
-                                  );
-                                  if (mounted) {
-                                    setState(() => _isConnecting = false);
-                                  }
-                                  return;
-                                }
-
                                 try {
-                                  _controlManager.setTransport(
-                                    UdpTransport(ip: ip, port: port),
-                                  );
-                                  await _controlManager.connect();
-
+                                  await _changeMode(localizations);
                                   if (!mounted) return;
                                   messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        localizations?.udpConnected ??
-                                            'UDP Connected',
+                                        localizations?.disconnected ??
+                                            'Disconnected',
                                       ),
                                     ),
                                   );
@@ -218,13 +330,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   if (!mounted) return;
                                   messenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        e is TimeoutException
-                                            ? (localizations
-                                                    ?.udpConnectTimeout ??
-                                                'UDP connect timeout (no response from ESP32)')
-                                            : '${localizations?.failedToConnectUdp ?? 'Failed to connect UDP'}: $e',
-                                      ),
+                                      content: Text(e.toString()),
                                     ),
                                   );
                                 } finally {
@@ -248,54 +354,286 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    localizations?.connecting ??
-                                        'Connecting...',
+                                  Flexible(
+                                    child: Text(
+                                      localizations?.connecting ??
+                                          'Connecting...',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               )
-                            : Text(
-                                isConnected
-                                    ? (localizations?.connected ?? 'Connected')
-                                    : (localizations?.connect ?? 'Connect'),
-                              ),
+                            : const Text('Change mode'),
                       ),
                     ),
-                    if (isConnected) ...[
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(
-                              context,
-                            ).colorScheme.error,
-                          ),
-                          onPressed: () {
-                            _controlManager.disconnect();
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  localizations?.disconnected ??
-                                      'Disconnected',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            localizations?.disconnect ?? 'Disconnect',
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 );
-              },
-            ),
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: canConnect
+                          ? () async {
+                              setState(() => _isConnecting = true);
+                              final messenger = ScaffoldMessenger.of(context);
+
+                              try {
+                                if (_connectionMode == ControllerMode.ble) {
+                                  await _showBluetoothReminder(localizations);
+                                }
+                                await _connectToSelectedMode(localizations);
+
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      localizations?.connected ?? 'Connected',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e is TimeoutException
+                                          ? (localizations?.udpConnectTimeout ??
+                                              'UDP connect timeout (no response from ESP32)')
+                                          : e.toString(),
+                                    ),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isConnecting = false);
+                                }
+                              }
+                            }
+                          : null,
+                      child: _isConnecting
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Flexible(
+                                  child: Text(
+                                    localizations?.connecting ?? 'Connecting...',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              isConnected && matchesMode
+                                  ? (localizations?.connected ?? 'Connected')
+                                  : (localizations?.connect ?? 'Connect'),
+                            ),
+                    ),
+                  ),
+                  if (isConnected) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.error,
+                        ),
+                        onPressed: () async {
+                          _controlManager.disconnect();
+                          if (mounted) {
+                            setState(() => _activeMode = null);
+                          }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                localizations?.disconnected ?? 'Disconnected',
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(disconnectLabel),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-        ],
+        ),
       ],
     );
+  }
+
+  Future<void> _showBluetoothReminder(
+    AppLocalizations? localizations,
+  ) async {
+    if (_skipBluetoothReminder) return;
+
+    final title = localizations?.bluetoothLe ?? 'Bluetooth LE';
+    final body = localizations?.bluetoothReminderBody ??
+        'Make sure Bluetooth is enabled on your phone.';
+    final openSettingsLabel =
+        localizations?.bluetoothOpenSettings ?? 'Open settings';
+    final okLabel = localizations?.ok ?? 'OK';
+    bool rememberChoice = _skipBluetoothReminder;
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(body),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: rememberChoice,
+                    title: const Text('Remember this'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (value) {
+                      setDialogState(() => rememberChoice = value == true);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    if (rememberChoice) {
+                      await _persistBluetoothReminderPreference(true);
+                    }
+                  },
+                  child: Text(okLabel),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    if (rememberChoice) {
+                      await _persistBluetoothReminderPreference(true);
+                    }
+                    await _openBluetoothSettings();
+                  },
+                  child: Text(openSettingsLabel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openBluetoothSettings() async {
+    if (!Platform.isAndroid) return;
+
+    const intent = AndroidIntent(
+      action: 'android.settings.BLUETOOTH_SETTINGS',
+    );
+    await intent.launch();
+  }
+
+  Future<void> _changeMode(AppLocalizations? localizations) async {
+    final currentTransport = _controlManager.transport;
+    if (currentTransport == null || !currentTransport.isConnected) {
+      throw Exception(
+        localizations?.connectFirstToSwitch ??
+            'Connect to the controller first to switch modes.',
+      );
+    }
+
+    final mode = _connectionMode;
+    if (mode == ControllerMode.ble) {
+      await _showBluetoothReminder(localizations);
+    }
+
+    _controlManager.pauseSending();
+
+    for (var i = 0; i < 3; i += 1) {
+      try {
+        await currentTransport.sendModeCommand(mode);
+      } catch (_) {
+        // Ignore write errors during mode switch attempts.
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    _controlManager.disconnect();
+    if (mounted) {
+      setState(() => _activeMode = null);
+    }
+  }
+
+  Future<void> _connectToSelectedMode(AppLocalizations? localizations) async {
+    final mode = _connectionMode;
+
+    if (mode == ControllerMode.wifiAp) {
+      final ip = _ipController.text.trim();
+      final port = int.tryParse(_portController.text.trim()) ?? 4210;
+
+      if (ip.isEmpty) {
+        throw Exception(
+          localizations?.pleaseEnterEsp32Ip ?? 'Please enter ESP32 IP',
+        );
+      }
+
+      final transport = UdpTransport(ip: ip, port: port);
+      _controlManager.setTransport(transport);
+      await _controlManager.connect();
+
+      await transport.sendModeCommand(mode);
+      if (mounted) {
+        setState(() => _activeMode = mode);
+      }
+      return;
+    }
+
+    final currentTransport = _controlManager.transport;
+    if (currentTransport != null && currentTransport.isConnected) {
+      _controlManager.disconnect();
+    }
+
+    final transport = BleTransport();
+    _controlManager.setTransport(transport);
+    await _connectWithRetry(transport);
+    await transport.sendModeCommand(mode);
+    if (mounted) {
+      setState(() => _activeMode = mode);
+    }
+  }
+
+  Future<void> _connectWithRetry(ControlTransport transport) async {
+    const attempts = 3;
+    for (var i = 0; i < attempts; i += 1) {
+      try {
+        await _controlManager.connect();
+        return;
+      } catch (_) {
+        if (i == attempts - 1) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+    }
   }
 
   Widget _buildControlSection() {
@@ -311,21 +649,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        ListTile(
-          title: Text(localizations?.joystickDeadZone ?? 'Joystick Dead Zone'),
-          subtitle: Text('${(_deadZone * 100).toStringAsFixed(0)}%'),
-        ),
-        Slider(
-          value: _deadZone,
-          min: 0.0,
-          max: 0.3,
-          divisions: 30,
-          label: '${(_deadZone * 100).toStringAsFixed(0)}%',
-          onChanged: (value) {
-            setState(() => _deadZone = value);
-            _controlManager.setDeadZone(value);
-          },
-        ),
         ListTile(
           title: Text(localizations?.maxDriveSpeed ?? 'Max Drive Speed'),
           subtitle: Text('${(_driveScale * 100).toStringAsFixed(0)}%'),

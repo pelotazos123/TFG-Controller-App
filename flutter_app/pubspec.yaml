@@ -39,6 +39,9 @@ dependencies:
 
   # For Bluetooth Low Energy
   flutter_blue_plus: ^1.32.0
+
+  # For opening Bluetooth settings on Android
+  android_intent_plus: ^5.1.0
   
   # For storing settings
   shared_preferences: ^2.2.2
