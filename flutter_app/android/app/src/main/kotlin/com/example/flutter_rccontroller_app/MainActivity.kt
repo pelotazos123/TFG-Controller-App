@@ -59,6 +59,7 @@ class MainActivity : FlutterActivity() {
 
         if (existingWifi != null) {
             if (boundNetwork == existingWifi) {
+                registerLossCallback(connectivityManager)
                 result.success(true)
                 return
             }
@@ -67,6 +68,7 @@ class MainActivity : FlutterActivity() {
 
             if (bindProcessToNetworkCompat(connectivityManager, existingWifi)) {
                 boundNetwork = existingWifi
+                registerLossCallback(connectivityManager)
                 result.success(true)
             } else {
                 result.error(
@@ -278,6 +280,30 @@ class MainActivity : FlutterActivity() {
         }
 
         networkCallback = null
+    }
+
+    private fun registerLossCallback(connectivityManager: ConnectivityManager) {
+        if (networkCallback != null) return
+
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .build()
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onLost(network: Network) {
+                if (network == boundNetwork) {
+                    clearBinding()
+                }
+            }
+        }
+
+        networkCallback = callback
+
+        try {
+            connectivityManager.registerNetworkCallback(request, callback)
+        } catch (_: Exception) {
+            networkCallback = null
+        }
     }
 
     private fun clearTimeout() {

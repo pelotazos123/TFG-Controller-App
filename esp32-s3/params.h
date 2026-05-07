@@ -33,11 +33,6 @@ const int REAR_IN3 = 37;   // Direction pin 1 for rear-right
 const int REAR_IN4 = 36;   // Direction pin 2 for rear-right
 const int REAR_ENB = 35;   // PWM for rear-right
 
-// PWM channels
-const int CH_FRONT_LEFT = 2;
-const int CH_FRONT_RIGHT = 3;
-const int CH_REAR_LEFT = 0;
-const int CH_REAR_RIGHT = 1;
 
 // ========= GPS (NEO-6M) =========
 const int GPS_RX_PIN = 1;
@@ -52,6 +47,7 @@ void udpResetControlEndpoint();
 // ========= Timing =========
 extern const unsigned long TIMEOUT_MS = 200;
 extern const unsigned long FAILSAFE_MS = 300;
+extern const unsigned long MODE_FALLBACK_MS = 45000;
 
 // ========= Joystick =========
 extern float tx;
@@ -60,12 +56,36 @@ extern float sx;
 extern float sy;
 
 enum Mode {
+  MODE_NONE,
   MODE_WIFI_AP,
-  MODE_WIFI_STA,
   MODE_BLE
 };
 
 extern Mode currentMode;
+extern Mode mainMode;
+extern bool modeChangePending;
+extern Mode pendingMode;
+extern unsigned long modeChangeStartMs;
+extern bool deviceConnected;
+void applyPendingModeChange();
+
+// ========= Connection modes =========
+void activateWIFI_AP();
+void activateBLE();
+void stopBLE();
+void activateMainMode();
+void activateFallbackMode();
+void requestModeChange(const char* modeValue, const char* ssid, const char* pass);
+void requestMainModeChange(const char* modeValue, const char* ssid, const char* pass);
+void noteModeActivity(Mode mode);
+
+// ========= Persistent settings =========
+void loadPersistentSettings();
+void saveMainMode(Mode mode);
+
+// ========= Transports =========
+void UDPtransport();
+void BLEtransport();
 
 // ========= GPS API =========
 void setupGPS();

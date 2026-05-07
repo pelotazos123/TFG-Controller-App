@@ -4,7 +4,7 @@ This firmware handles:
 - Motor control (4 motors through 2x L298N)
 - UDP control input from the Flutter app
 - GPS telemetry (NEO-6M)
-- WiFi AP or WiFi STA startup modes
+- WiFi AP or BLE startup modes
 
 ## 1) Hardware setup
 
@@ -18,27 +18,27 @@ This firmware handles:
 ### 1.2 GPS wiring (NEO-6M)
 - NEO-6M VCC -> ESP32 3V3 (or 5V if your module requires it)
 - NEO-6M GND -> ESP32 GND
-- NEO-6M TX -> ESP32 GPIO16 (GPS_RX_PIN)
-- NEO-6M RX -> ESP32 GPIO18 (GPS_TX_PIN)
+- NEO-6M TX -> ESP32 GPIO1 (GPS_RX_PIN)
+- NEO-6M RX -> ESP32 GPIO2 (GPS_TX_PIN)
 
 ### 1.3 Motor driver pin map
 Pins are defined in params.h.
 
 Front driver (L298N #1):
-- FRONT_ENA -> GPIO4
-- FRONT_IN1 -> GPIO5
-- FRONT_IN2 -> GPIO6
-- FRONT_IN3 -> GPIO7
-- FRONT_IN4 -> GPIO8
-- FRONT_ENB -> GPIO9
+- FRONT_ENA -> GPIO45
+- FRONT_IN1 -> GPIO48
+- FRONT_IN2 -> GPIO47
+- FRONT_IN3 -> GPIO21
+- FRONT_IN4 -> GPIO20
+- FRONT_ENB -> GPIO19
 
 Rear driver (L298N #2):
-- REAR_ENA -> GPIO10
-- REAR_IN1 -> GPIO11
-- REAR_IN2 -> GPIO12
-- REAR_IN3 -> GPIO13
-- REAR_IN4 -> GPIO14
-- REAR_ENB -> GPIO15
+- REAR_ENA -> GPIO40
+- REAR_IN1 -> GPIO39
+- REAR_IN2 -> GPIO38
+- REAR_IN3 -> GPIO37
+- REAR_IN4 -> GPIO36
+- REAR_ENB -> GPIO35
 
 ## 2) Software requirements
 
@@ -58,22 +58,21 @@ Notes:
 In esp32-s3.ino, choose one startup mode in setup():
 
 - AP mode (default): activateWIFI_AP();
-- STA mode: activateWiFi_STA();
+- BLE mode: activateBLE();
 
 Current default is AP mode.
 
 ### 3.2 AP mode defaults
 Defined in wifi_ap.ino:
 - SSID: ESP32_RC
-- Password: 12345678
+- Password: 123456789
 - UDP port: 4210
 
-### 3.3 STA mode credentials
-Defined in WiFiCredentials.h:
-- STA_SSID
-- STA_PASS
-
-Edit those values before upload if using STA mode.
+### 3.3 BLE mode
+- Device name: ESP32-BLE
+- Service UUID: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
+- RX characteristic: 6E400002-B5A3-F393-E0A9-E50E24DCCA9E
+- TX characteristic: 6E400003-B5A3-F393-E0A9-E50E24DCCA9E
 
 ## 4) Build and upload (Arduino IDE)
 
@@ -142,5 +141,6 @@ Sent once per second to the active control endpoint:
 
 - No upload: verify board/port and USB cable (data cable, not charge-only)
 - No GPS data: verify TX/RX wiring and antenna visibility to open sky
-- No UDP control: check phone/PC network and startup mode (AP vs STA)
+- No UDP control: check phone/PC network and startup mode (AP vs BLE)
+- No BLE control: ensure the device is bonded and Bluetooth is enabled
 - Unstable motor behavior: verify driver wiring and common ground between ESP32 and motor driver supply

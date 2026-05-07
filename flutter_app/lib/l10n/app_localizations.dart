@@ -134,11 +134,47 @@ abstract class AppLocalizations {
   /// **'WiFi'**
   String get wifi;
 
+  /// No description provided for @wifiAp.
+  ///
+  /// In en, this message translates to:
+  /// **'WiFi AP'**
+  String get wifiAp;
+
   /// No description provided for @bluetooth.
   ///
   /// In en, this message translates to:
   /// **'Bluetooth'**
   String get bluetooth;
+
+  /// No description provided for @bluetoothLe.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth LE'**
+  String get bluetoothLe;
+
+  /// No description provided for @bluetoothReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Make sure Bluetooth is enabled on your phone.'**
+  String get bluetoothReminderBody;
+
+  /// No description provided for @bluetoothOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get bluetoothOpenSettings;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @connectFirstToSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the controller first to switch modes.'**
+  String get connectFirstToSwitch;
 
   /// No description provided for @esp32IpAddress.
   ///

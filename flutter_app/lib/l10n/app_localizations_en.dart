@@ -27,7 +27,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wifi => 'WiFi';
 
   @override
+  String get wifiAp => 'WiFi AP';
+
+  @override
   String get bluetooth => 'Bluetooth';
+
+  @override
+  String get bluetoothLe => 'Bluetooth LE';
+
+  @override
+  String get bluetoothReminderBody =>
+      'Make sure Bluetooth is enabled on your phone.';
+
+  @override
+  String get bluetoothOpenSettings => 'Open settings';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get connectFirstToSwitch =>
+      'Connect to the controller first to switch modes.';
 
   @override
   String get esp32IpAddress => 'ESP32 IP Address';

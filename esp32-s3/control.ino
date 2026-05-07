@@ -6,11 +6,16 @@ const int PWM_FREQ = 1000;
 const int PWM_RES = 8;  // 0-255
 const int PWM_MAX = (1 << PWM_RES) - 1;
 
-const float DEADZONE = 0.05f;
-const float MOTOR_OUTPUT_DEADZONE = 0.015f;
-const float MOTOR_SLEW_RATE_PER_SEC = 3.0f;
+const float MOTOR_SLEW_RATE_PER_SEC = 10.0f;
 const float STRAFE_INPUT_SIGN = -1.0f;
 const float THROTTLE_INPUT_SIGN = -1.0f;
+
+// Favor cardinal directions when one axis clearly dominates.
+const float AXIS_DOMINANCE_RATIO = 1.35f;
+const float AXIS_CROSS_DEADBAND = 0.18f;
+
+// Minimum effective power where the car reliably moves.
+const float MIN_EFFECTIVE_POWER = 0.45f;
 
 // Use the same startup threshold on all wheels so standstill -> movement
 // happens at the same instant.
@@ -36,18 +41,27 @@ static float clamp(float v, float minV, float maxV) {
 	return v;
 }
 
-static float applyDeadzone(float v) {
-	if (fabs(v) < DEADZONE) return 0.0f;
-	return v;
+static void applyAxisAssist(float &forward, float &strafe) {
+	float absForward = fabs(forward);
+	float absStrafe = fabs(strafe);
+
+	if (absForward == 0.0f && absStrafe == 0.0f) return;
+
+	if (absForward >= absStrafe * AXIS_DOMINANCE_RATIO || absStrafe < AXIS_CROSS_DEADBAND) {
+		strafe = 0.0f;
+		return;
+	}
+
+	if (absStrafe >= absForward * AXIS_DOMINANCE_RATIO || absForward < AXIS_CROSS_DEADBAND) {
+		forward = 0.0f;
+	}
 }
 
-static float applyOutputDeadzone(float v) {
-	if (fabs(v) < MOTOR_OUTPUT_DEADZONE) return 0.0f;
-	return v;
-}
 
 static float movementPower(float value) {
-	return clamp(fabs(value), 0.0f, 1.0f);
+	float mag = clamp(fabs(value), 0.0f, 1.0f);
+	if (mag == 0.0f) return 0.0f;
+	return MIN_EFFECTIVE_POWER + (1.0f - MIN_EFFECTIVE_POWER) * mag;
 }
 
 static float applyStartBoost(float v, float startCmd) {
@@ -192,11 +206,11 @@ static float slewToward(float current, float target, float maxDelta) {
 	return target;
 }
 
-// Set L298N motor: in1/in2 for direction, pwmChannel for speed.
+// Set L298N motor: in1/in2 for direction, pwmPin for speed.
 static void setL298Motor(
 	int in1,
 	int in2,
-	int pwmChannel,
+	int pwmPin,
 	float speed,
 	float startCmd,
 	int minDuty
@@ -207,7 +221,7 @@ static void setL298Motor(
 	if (mag < startCmd || speed == 0.0f) {
 		digitalWrite(in1, LOW);
 		digitalWrite(in2, LOW);
-		ledcWrite(pwmChannel, 0);
+		ledcWrite(pwmPin, 0);
 		return;
 	}
 
@@ -228,7 +242,7 @@ static void setL298Motor(
 	float scaled = (mag - startCmd) / (1.0f - startCmd);
 	scaled = clamp(scaled, 0.0f, 1.0f);
 	int duty = minDuty + (int)(scaled * (float)(PWM_MAX - minDuty));
-	ledcWrite(pwmChannel, duty);
+	ledcWrite(pwmPin, duty);
 }
 
 void controlSetup() {
@@ -244,21 +258,16 @@ void controlSetup() {
 	pinMode(REAR_IN3, OUTPUT);
 	pinMode(REAR_IN4, OUTPUT);
 
-  ledcSetup(CH_FRONT_LEFT, PWM_FREQ, PWM_RES);
-  ledcSetup(CH_FRONT_RIGHT, PWM_FREQ, PWM_RES);
-  ledcSetup(CH_REAR_LEFT, PWM_FREQ, PWM_RES);
-  ledcSetup(CH_REAR_RIGHT, PWM_FREQ, PWM_RES);
-
-	ledcAttachPin(FRONT_ENA, CH_FRONT_LEFT);  // Front-left PWM
-	ledcAttachPin(FRONT_ENB, CH_FRONT_RIGHT);  // Front-right PWM
-	ledcAttachPin(REAR_ENA, CH_REAR_LEFT);   // Rear-left PWM
-	ledcAttachPin(REAR_ENB, CH_REAR_RIGHT);   // Rear-right PWM
+  	ledcAttach(FRONT_ENA, PWM_FREQ, PWM_RES);
+  	ledcAttach(FRONT_ENB, PWM_FREQ, PWM_RES);
+  	ledcAttach(REAR_ENA, PWM_FREQ, PWM_RES);
+  	ledcAttach(REAR_ENB, PWM_FREQ, PWM_RES);
 
 	// Stop all motors initially
-	setL298Motor(FRONT_IN1, FRONT_IN2, CH_FRONT_LEFT, 0, START_CMD_ALL, MIN_DUTY_ALL);   // Front-left
-	setL298Motor(FRONT_IN3, FRONT_IN4, CH_FRONT_RIGHT, 0, START_CMD_ALL, MIN_DUTY_ALL);  // Front-right
-	setL298Motor(REAR_IN1, REAR_IN2, CH_REAR_LEFT, 0, START_CMD_ALL, MIN_DUTY_ALL);      // Rear-left
-	setL298Motor(REAR_IN3, REAR_IN4, CH_REAR_RIGHT, 0, START_CMD_ALL, MIN_DUTY_ALL);     // Rear-right
+	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, 0, START_CMD_ALL, MIN_DUTY_ALL);   // Front-left
+	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, 0, START_CMD_ALL, MIN_DUTY_ALL);   // Front-right
+	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, 0, START_CMD_ALL, MIN_DUTY_ALL);      // Rear-left
+	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, 0, START_CMD_ALL, MIN_DUTY_ALL);      // Rear-right
 
 	cmdFrontLeft = 0.0f;
 	cmdFrontRight = 0.0f;
@@ -270,9 +279,11 @@ void controlSetup() {
 // Omnidirectional (mecanum/X-drive style) control:
 // tx = strafe, sy = forward/backward, sx = rotation
 void controlUpdate() {
-	float strafe = applyDeadzone(tx) * STRAFE_INPUT_SIGN;
-	float forward = applyDeadzone(sy) * THROTTLE_INPUT_SIGN;
-	float rotate = applyDeadzone(sx);
+	float strafe = tx * STRAFE_INPUT_SIGN;
+	float forward = sy * THROTTLE_INPUT_SIGN;
+	float rotate = sx;
+
+	applyAxisAssist(forward, strafe);
 
 	float frontLeft = 0.0f;
 	float frontRight = 0.0f;
@@ -340,13 +351,9 @@ void controlUpdate() {
 	cmdRearLeft = slewToward(cmdRearLeft, rearLeft, maxDelta);
 	cmdRearRight = slewToward(cmdRearRight, rearRight, maxDelta);
 
-	cmdFrontLeft = applyOutputDeadzone(cmdFrontLeft);
-	cmdFrontRight = applyOutputDeadzone(cmdFrontRight);
-	cmdRearLeft = applyOutputDeadzone(cmdRearLeft);
-	cmdRearRight = applyOutputDeadzone(cmdRearRight);
 
-	setL298Motor(FRONT_IN1, FRONT_IN2, CH_FRONT_LEFT, cmdFrontLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(FRONT_IN3, FRONT_IN4, CH_FRONT_RIGHT, cmdFrontRight, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN1, REAR_IN2, CH_REAR_LEFT, cmdRearLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN3, REAR_IN4, CH_REAR_RIGHT, cmdRearRight, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, cmdFrontLeft, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, cmdFrontRight, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, cmdRearLeft, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, cmdRearRight, START_CMD_ALL, MIN_DUTY_ALL);
 }

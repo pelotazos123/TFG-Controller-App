@@ -3,29 +3,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
+import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/services/network_binding_service.dart';
-
-class GpsTelemetry {
-  final bool valid;
-  final double latitude;
-  final double longitude;
-  final double altitude;
-  final double speedKmph;
-  final int satellites;
-  final int ageMs;
-  final DateTime receivedAt;
-
-  const GpsTelemetry({
-    required this.valid,
-    required this.latitude,
-    required this.longitude,
-    required this.altitude,
-    required this.speedKmph,
-    required this.satellites,
-    required this.ageMs,
-    required this.receivedAt,
-  });
-}
 
 class UdpTransport implements ControlTransport {
   final String ip;
@@ -42,10 +21,11 @@ class UdpTransport implements ControlTransport {
 
   UdpTransport({required this.ip, required this.port});
 
-  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
-
   @override
   bool get isConnected => _initialized;
+
+  @override
+  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
 
   @override
   Future<void> connect() async {
@@ -146,6 +126,46 @@ class UdpTransport implements ControlTransport {
     _gpsTelemetry = null;
     
     unawaited(NetworkBindingService.clearBinding());
+  }
+
+  @override
+  Future<void> sendModeCommand(
+    ControllerMode mode, {
+    String? ssid,
+    String? password,
+  }) async {
+    if (!_initialized || _socket == null || _targetAddress == null || _targetPort == null) {
+      return;
+    }
+
+    final payload = jsonEncode({
+      'type': 'set_mode',
+      'mode': controllerModeToPayload(mode),
+      if (ssid != null) 'ssid': ssid,
+      if (password != null) 'pass': password,
+    });
+
+    _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
+  }
+
+  @override
+  Future<void> sendMainModeCommand(
+    ControllerMode mode, {
+    String? ssid,
+    String? password,
+  }) async {
+    if (!_initialized || _socket == null || _targetAddress == null || _targetPort == null) {
+      return;
+    }
+
+    final payload = jsonEncode({
+      'type': 'set_main_mode',
+      'mode': controllerModeToPayload(mode),
+      if (ssid != null) 'ssid': ssid,
+      if (password != null) 'pass': password,
+    });
+
+    _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
   }
 
   void _startHealthMonitor() {

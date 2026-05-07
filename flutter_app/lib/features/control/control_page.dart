@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
 import 'package:flutter_rccontroller_app/l10n/app_localizations.dart';
 import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
+import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 
 import '../../locale_provider.dart';
@@ -250,12 +251,12 @@ class _ControlPageState extends State<ControlPage> {
 
         final connectedIcon = switch (transport) {
           UdpTransport() => Icons.wifi,
-          BluetoothTransport() => Icons.bluetooth,
+          BleTransport() => Icons.bluetooth,
           _ => Icons.link,
         };
         final disconnectedIcon = switch (transport) {
           UdpTransport() => Icons.wifi_off,
-          BluetoothTransport() => Icons.bluetooth_disabled,
+          BleTransport() => Icons.bluetooth_disabled,
           _ => Icons.link_off,
         };
 
@@ -456,11 +457,7 @@ class _ControlPageState extends State<ControlPage> {
   }) {
     final center = Offset(joystickSize / 2, joystickSize / 2);
     final offset = localPosition - center;
-    var normalized = _normalizeFromCenter(
-      offset,
-      translateFactor,
-      deadZone: _controlManager.deadZone,
-    );
+    var normalized = _normalizeFromCenter(offset, translateFactor);
 
     if (horizontalOnly) {
       normalized = Offset(normalized.dx, 0.0);
@@ -469,11 +466,7 @@ class _ControlPageState extends State<ControlPage> {
     onChanged(normalized);
   }
 
-  Offset _normalizeFromCenter(
-    Offset offset,
-    double maxDistance, {
-    required double deadZone,
-  }) {
+  Offset _normalizeFromCenter(Offset offset, double maxDistance) {
     final distance = offset.distance;
     if (distance == 0) return Offset.zero;
 
@@ -485,15 +478,14 @@ class _ControlPageState extends State<ControlPage> {
       (normalized.dy / maxDistance).clamp(-1.0, 1.0),
     );
 
-    return _applyRadialDeadZoneAndCurve(raw, deadZone);
+    return _applyRadialCurve(raw);
   }
 
-  Offset _applyRadialDeadZoneAndCurve(Offset raw, double deadZone) {
-    final dz = deadZone.clamp(0.0, 0.999);
+  Offset _applyRadialCurve(Offset raw) {
     final magnitude = raw.distance;
-    if (magnitude <= dz || magnitude == 0) return Offset.zero;
+    if (magnitude == 0) return Offset.zero;
 
-    final scaled = ((magnitude - dz) / (1.0 - dz)).clamp(0.0, 1.0);
+    final scaled = magnitude.clamp(0.0, 1.0);
     final curved = math.pow(scaled, _responseGamma).toDouble();
     final dir = raw / magnitude;
     return Offset(dir.dx * curved, dir.dy * curved);

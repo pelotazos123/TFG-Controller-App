@@ -1,7 +1,15 @@
 #include <Arduino.h>
 #include "params.h"
+#include "esp_system.h"
 
-Mode currentMode = MODE_BLE;
+Mode currentMode = MODE_NONE;
+Mode mainMode = MODE_WIFI_AP;
+static unsigned long lastModeActiveMs = 0;
+static const unsigned long MODE_RECOVERY_MS = 3000;
+bool modeChangePending = false;
+Mode pendingMode = MODE_NONE;
+unsigned long modeChangeStartMs = 0;
+static const unsigned long MODE_CHANGE_TIMEOUT_MS = 30000;
 
 void setup() {
   Serial.begin(115200);
@@ -10,17 +18,35 @@ void setup() {
   controlSetup();
   setupGPS();
 
-  activateWIFI_AP();    // startup by WiFi Access Point (default mode)
-  //activateWiFi_STA(); // startup by WiFi Station (connect to existing WiFi network)
+  loadPersistentSettings();
+  activateMainMode();
 }
 
 void loop() {
   gpsUpdate();
 
-  if (currentMode == MODE_WIFI_STA || currentMode == MODE_WIFI_AP) {
+  applyPendingModeChange();
+
+  unsigned long now = millis();
+  if (currentMode != MODE_NONE) {
+    lastModeActiveMs = now;
+  } else if (lastModeActiveMs == 0) {
+    lastModeActiveMs = now;
+  } else if (now - lastModeActiveMs > MODE_RECOVERY_MS) {
+    activateMainMode();
+    lastModeActiveMs = now;
+  }
+
+  if (modeChangePending && now - modeChangeStartMs > MODE_CHANGE_TIMEOUT_MS) {
+    modeChangePending = false;
+    activateMainMode();
+  }
+
+  if (currentMode == MODE_WIFI_AP) {
     UDPtransport();
+  } else if (currentMode == MODE_BLE) {
+    BLEtransport();
   } else {
-    //TODO: BLE transport
     tx = ty = sx = sy = 0.0f;
   }
 
