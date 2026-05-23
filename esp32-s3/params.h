@@ -39,6 +39,14 @@ const int GPS_RX_PIN = 1;
 const int GPS_TX_PIN = 2;
 const uint32_t GPS_BAUD = 9600;
 
+// ========= Mode button =========
+const int PIN_BUTTON = 41;
+const unsigned long MODE_BUTTON_DEBOUNCE_MS = 40;
+
+// ========= BLE controller (HID host) =========
+const char* BLE_CONTROLLER_NAME = "Wireless Controller";
+const unsigned long BLE_CONTROLLER_CONNECT_TIMEOUT_MS = 50000;
+
 // ========= UDP =========
 extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
@@ -58,7 +66,8 @@ extern float sy;
 enum Mode {
   MODE_NONE,
   MODE_WIFI_AP,
-  MODE_BLE
+  MODE_BLE,
+  MODE_BLE_CONTROLLER
 };
 
 extern Mode currentMode;
@@ -73,11 +82,16 @@ void applyPendingModeChange();
 void activateWIFI_AP();
 void activateBLE();
 void stopBLE();
+void activateBLEController();
+void stopBLEController();
 void activateMainMode();
 void activateFallbackMode();
 void requestModeChange(const char* modeValue, const char* ssid, const char* pass);
 void requestMainModeChange(const char* modeValue, const char* ssid, const char* pass);
 void noteModeActivity(Mode mode);
+
+// ========= BLE stack =========
+void ensureBleStackInitialized(const char* deviceName);
 
 // ========= Persistent settings =========
 void loadPersistentSettings();
@@ -86,6 +100,7 @@ void saveMainMode(Mode mode);
 // ========= Transports =========
 void UDPtransport();
 void BLEtransport();
+void BLEControllerTransport();
 
 // ========= GPS API =========
 void setupGPS();

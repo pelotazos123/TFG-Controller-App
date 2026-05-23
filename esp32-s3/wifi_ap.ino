@@ -10,6 +10,7 @@ void activateWIFI_AP() {
   if (currentMode == MODE_WIFI_AP) return;
 
   stopBLE();
+  stopBLEController();
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_SSID, AP_PASS);

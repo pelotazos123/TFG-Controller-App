@@ -83,31 +83,8 @@ static void handleBleControlPacket(JsonDocument& doc) {
   lastBlePacketMs = millis();
 }
 
-static int16_t readInt16LeBle(const uint8_t* data) {
-  return (int16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8));
-}
-
-static bool handleBleBinaryPayload(const uint8_t* data, size_t len) {
-  if (len != 9 || data[0] != 0xA1) return false;
-
-  int16_t rawTx = readInt16LeBle(&data[1]);
-  int16_t rawTy = readInt16LeBle(&data[3]);
-  int16_t rawSx = readInt16LeBle(&data[5]);
-  int16_t rawSy = readInt16LeBle(&data[7]);
-
-  tx = (float)rawTx / 32767.0f;
-  ty = (float)rawTy / 32767.0f;
-  sx = (float)rawSx / 32767.0f;
-  sy = (float)rawSy / 32767.0f;
-  lastBlePacketMs = millis();
-  lastBleActivityMs = millis();
-  noteModeActivity(MODE_BLE);
-  return true;
-}
-
 static void processBlePayload(const uint8_t* data, size_t len) {
   if (data == nullptr || len == 0) return;
-  if (handleBleBinaryPayload(data, len)) return;
 
   StaticJsonDocument<160> doc;
   DeserializationError err = deserializeJson(doc, data, len);
@@ -148,6 +125,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 void setupBLE() {
+  ensureBleStackInitialized("ESP32-BLE");
   if (bleInitialized) {
     if (bleAdvertising != nullptr) {
       bleAdvertising->start();
@@ -158,9 +136,6 @@ void setupBLE() {
     return;
   }
 
-  BLEDevice::init("ESP32-BLE");
-  BLEDevice::setMTU(185);
-  BLEDevice::setPower(ESP_PWR_LVL_P9);
   bleServer = BLEDevice::createServer();
   bleServer->setCallbacks(new MyServerCallbacks());
 
@@ -234,6 +209,7 @@ static void sendBleGpsTelemetryIfDue() {
 void activateBLE() {
   if (currentMode == MODE_BLE) return;
 
+  stopBLEController();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   udp.stop();

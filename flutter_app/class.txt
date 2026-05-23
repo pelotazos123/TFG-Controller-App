@@ -1,0 +1,566 @@
+classDiagram
+class App
+App : -_themeProvider$ ThemeProvider
+App o-- ThemeProvider
+App : -_localeProvider$ LocaleProvider
+App o-- LocaleProvider
+App : +createState() State<App>
+StatefulWidget <|-- App
+
+class _AppState
+_AppState : -_splashDuration$ Duration
+_AppState : -_splashController AnimationController
+_AppState o-- AnimationController
+_AppState : -_showSplash bool
+_AppState : +initState() void
+_AppState : +dispose() void
+_AppState : +build() Widget
+State <|-- _AppState
+SingleTickerProviderStateMixin <|-- _AppState
+
+class _SplashTransition
+_SplashTransition : +animation Animation~double~
+_SplashTransition o-- Animation~double~
+_SplashTransition : +build() Widget
+StatelessWidget <|-- _SplashTransition
+
+class _WelcomeSplashPage
+_WelcomeSplashPage : +build() Widget
+StatelessWidget <|-- _WelcomeSplashPage
+
+class ControlManager
+ControlManager : +instance$ ControlManager
+ControlManager o-- ControlManager
+ControlManager : -_transport ControlTransport?
+ControlManager o-- ControlTransport
+ControlManager : -_sendTimer Timer?
+ControlManager o-- Timer
+ControlManager : -_lastKnownConnected bool
+ControlManager : -_lastSendMs int
+ControlManager : -_driveScale double
+ControlManager : -_reverseSteering bool
+ControlManager : -_reverseThrottle bool
+ControlManager : -_tx double
+ControlManager : -_ty double
+ControlManager : -_sx double
+ControlManager : -_activeMotion MotionCommand?
+ControlManager o-- MotionCommand
+ControlManager : -_activeMotionPower double
+ControlManager : -_gpsTelemetry GpsTelemetry?
+ControlManager o-- GpsTelemetry
+ControlManager : +transport ControlTransport?
+ControlManager o-- ControlTransport
+ControlManager : +driveScale double
+ControlManager : +reverseSteering bool
+ControlManager : +reverseThrottle bool
+ControlManager : +gpsTelemetry GpsTelemetry?
+ControlManager o-- GpsTelemetry
+ControlManager : +isConnected bool
+ControlManager : +setDriveScale() void
+ControlManager : +setReverseSteering() void
+ControlManager : +setReverseThrottle() void
+ControlManager : +setTransport() void
+ControlManager : +connect() dynamic
+ControlManager : +disconnect() void
+ControlManager : +pauseSending() void
+ControlManager : +sendJoystick() void
+ControlManager : +setMotionCommand() void
+ControlManager : -_startTimer() void
+ControlManager : -_stopTimer() void
+ControlManager : -_transmitCurrentState() void
+ControlManager : -_minSendIntervalMs() int
+ControlManager : -_markDisconnectedIfNeeded() void
+ChangeNotifier <|-- ControlManager
+
+class MotionCommand
+<<enumeration>> MotionCommand
+MotionCommand : +index int
+MotionCommand : +values$ List~MotionCommand~
+MotionCommand : +forward$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +backward$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +left$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +right$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +forwardLeft$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +forwardRight$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +backwardLeft$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +backwardRight$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +rotateLeft$ MotionCommand
+MotionCommand o-- MotionCommand
+MotionCommand : +rotateRight$ MotionCommand
+MotionCommand o-- MotionCommand
+Enum <|.. MotionCommand
+
+class ControlPage
+ControlPage : +themeProvider ThemeProvider?
+ControlPage o-- ThemeProvider
+ControlPage : +localeProvider LocaleProvider?
+ControlPage o-- LocaleProvider
+ControlPage : +createState() State<ControlPage>
+StatefulWidget <|-- ControlPage
+
+class _ControlPageState
+_ControlPageState : -_responseGamma$ double
+_ControlPageState : -_motionCommandPower$ double
+_ControlPageState : -_allOrientations$ List~DeviceOrientation~
+_ControlPageState : -_landscapeOrientations$ List~DeviceOrientation~
+_ControlPageState : -_leftJoystick Offset
+_ControlPageState o-- Offset
+_ControlPageState : -_rightJoystick Offset
+_ControlPageState o-- Offset
+_ControlPageState : -_activeMotion MotionCommand?
+_ControlPageState o-- MotionCommand
+_ControlPageState : -_isLandscapeLocked bool
+_ControlPageState : -_showMovementMatrix bool
+_ControlPageState : -_controlManager ControlManager
+_ControlPageState o-- ControlManager
+_ControlPageState : +initState() void
+_ControlPageState : -_toggleMovementMatrix() void
+_ControlPageState : +dispose() void
+_ControlPageState : +build() Widget
+_ControlPageState : -_buildStatusBar() Widget
+_ControlPageState : -_buildGpsTelemetryCard() Widget
+_ControlPageState : -_buildGpsMetric() Widget
+_ControlPageState : -_gpsLabel() String
+_ControlPageState : -_buildJoystick() Widget
+_ControlPageState : -_handleJoystickPan() void
+_ControlPageState : -_normalizeFromCenter() Offset
+_ControlPageState : -_applyRadialCurve() Offset
+_ControlPageState : -_sendCurrentControl() void
+_ControlPageState : -_setMotionCommand() void
+_ControlPageState : -_clearMotionCommand() void
+_ControlPageState : -_buildMotionPad() Widget
+_ControlPageState : -_buildDirectionButton() Widget
+_ControlPageState : -_motionCommandLabel() String
+State <|-- _ControlPageState
+
+class SettingsPage
+SettingsPage : +themeProvider ThemeProvider?
+SettingsPage o-- ThemeProvider
+SettingsPage : +localeProvider LocaleProvider?
+SettingsPage o-- LocaleProvider
+SettingsPage : +createState() State<SettingsPage>
+StatefulWidget <|-- SettingsPage
+
+class _SettingsPageState
+_SettingsPageState : -_mainModeKey$ String
+_SettingsPageState : -_bluetoothReminderKey$ String
+_SettingsPageState : -_ipController TextEditingController
+_SettingsPageState o-- TextEditingController
+_SettingsPageState : -_portController TextEditingController
+_SettingsPageState o-- TextEditingController
+_SettingsPageState : -_controlManager ControlManager
+_SettingsPageState o-- ControlManager
+_SettingsPageState : -_mainMode ControllerMode
+_SettingsPageState o-- ControllerMode
+_SettingsPageState : -_connectionMode ControllerMode
+_SettingsPageState o-- ControllerMode
+_SettingsPageState : -_activeMode ControllerMode?
+_SettingsPageState o-- ControllerMode
+_SettingsPageState : -_driveScale double
+_SettingsPageState : -_reverseThrottle bool
+_SettingsPageState : -_reverseSteering bool
+_SettingsPageState : -_skipBluetoothReminder bool
+_SettingsPageState : -_isConnecting bool
+_SettingsPageState : -_matchesSelectedMode() bool
+_SettingsPageState : -_resolveActiveMode() ControllerMode?
+_SettingsPageState : -_shortModeLabel() String
+_SettingsPageState : +initState() void
+_SettingsPageState : +dispose() void
+_SettingsPageState : -_loadMainMode() dynamic
+_SettingsPageState : -_loadBluetoothReminderPreference() dynamic
+_SettingsPageState : -_persistBluetoothReminderPreference() dynamic
+_SettingsPageState : -_persistMainMode() dynamic
+_SettingsPageState : -_setMainMode() dynamic
+_SettingsPageState : -_modeToPrefs() String
+_SettingsPageState : -_modeFromPrefs() ControllerMode
+_SettingsPageState : +build() Widget
+_SettingsPageState : -_buildLanguageSection() Widget
+_SettingsPageState : -_buildConnectionSection() Widget
+_SettingsPageState : -_showBluetoothReminder() dynamic
+_SettingsPageState : -_openBluetoothSettings() dynamic
+_SettingsPageState : -_changeMode() dynamic
+_SettingsPageState : -_connectToSelectedMode() dynamic
+_SettingsPageState : -_connectWithRetry() dynamic
+_SettingsPageState : -_buildControlSection() Widget
+_SettingsPageState : -_buildThemeSection() Widget
+_SettingsPageState : -_buildAboutSection() Widget
+_SettingsPageState : -_buildSectionHeader() Widget
+_SettingsPageState : -_buildAboutTile() Widget
+State <|-- _SettingsPageState
+
+class AppLocalizations
+<<abstract>> AppLocalizations
+AppLocalizations : +localeName String
+AppLocalizations : +delegate$ LocalizationsDelegate~AppLocalizations~
+AppLocalizations o-- LocalizationsDelegate~AppLocalizations~
+AppLocalizations : +localizationsDelegates$ List~LocalizationsDelegate~dynamic~~
+AppLocalizations : +supportedLocales$ List~Locale~
+AppLocalizations : +appTitle String
+AppLocalizations : +settings String
+AppLocalizations : +language String
+AppLocalizations : +back String
+AppLocalizations : +connection String
+AppLocalizations : +connectionType String
+AppLocalizations : +wifi String
+AppLocalizations : +wifiAp String
+AppLocalizations : +bluetooth String
+AppLocalizations : +bluetoothLe String
+AppLocalizations : +bluetoothReminderBody String
+AppLocalizations : +bluetoothOpenSettings String
+AppLocalizations : +ok String
+AppLocalizations : +connectFirstToSwitch String
+AppLocalizations : +esp32IpAddress String
+AppLocalizations : +port String
+AppLocalizations : +pleaseEnterEsp32Ip String
+AppLocalizations : +udpConnected String
+AppLocalizations : +udpConnectTimeout String
+AppLocalizations : +failedToConnectUdp String
+AppLocalizations : +connecting String
+AppLocalizations : +connect String
+AppLocalizations : +connected String
+AppLocalizations : +disconnect String
+AppLocalizations : +disconnected String
+AppLocalizations : +connectionLost String
+AppLocalizations : +mainMode String
+AppLocalizations : +mainModeDescription String
+AppLocalizations : +changeMode String
+AppLocalizations : +controlSettings String
+AppLocalizations : +maxDriveSpeed String
+AppLocalizations : +reverseStrafeX String
+AppLocalizations : +leftJoystickHorizontalAxis String
+AppLocalizations : +reverseForwardBackY String
+AppLocalizations : +leftJoystickVerticalAxis String
+AppLocalizations : +appearance String
+AppLocalizations : +theme String
+AppLocalizations : +system String
+AppLocalizations : +light String
+AppLocalizations : +dark String
+AppLocalizations : +about String
+AppLocalizations : +appName String
+AppLocalizations : +version String
+AppLocalizations : +hardware String
+AppLocalizations : +developer String
+AppLocalizations : +organization String
+AppLocalizations : +description String
+AppLocalizations : +appDescription String
+AppLocalizations : +translation String
+AppLocalizations : +rotation String
+AppLocalizations : +movementMatrix String
+AppLocalizations : +hideMovementMatrix String
+AppLocalizations : +showMovementMatrix String
+AppLocalizations : +gpsWaiting String
+AppLocalizations : +gpsFix String
+AppLocalizations : +gpsNoFix String
+AppLocalizations : +gpsLatLabel String
+AppLocalizations : +gpsLonLabel String
+AppLocalizations : +gpsSatLabel String
+AppLocalizations : +gpsSpeedLabel String
+AppLocalizations : +english String
+AppLocalizations : +spanish String
+AppLocalizations : +rememberThis String
+AppLocalizations : +lockRotation String
+AppLocalizations : +unlockRotation String
+AppLocalizations : +preparingControllerInterface String
+AppLocalizations : +moveForward String
+AppLocalizations : +moveBackward String
+AppLocalizations : +moveLeft String
+AppLocalizations : +moveRight String
+AppLocalizations : +rotateRightCmd String
+AppLocalizations : +rotateLeftCmd String
+AppLocalizations : +moveForwardLeft String
+AppLocalizations : +moveBackwardLeft String
+AppLocalizations : +moveForwardRight String
+AppLocalizations : +moveBackwardRight String
+AppLocalizations : +of()$ AppLocalizations?
+
+class _AppLocalizationsDelegate
+_AppLocalizationsDelegate : +load() dynamic
+_AppLocalizationsDelegate : +isSupported() bool
+_AppLocalizationsDelegate : +shouldReload() bool
+LocalizationsDelegate <|-- _AppLocalizationsDelegate
+
+class AppLocalizationsEn
+AppLocalizationsEn : +appTitle String
+AppLocalizationsEn : +settings String
+AppLocalizationsEn : +language String
+AppLocalizationsEn : +back String
+AppLocalizationsEn : +connection String
+AppLocalizationsEn : +connectionType String
+AppLocalizationsEn : +wifi String
+AppLocalizationsEn : +wifiAp String
+AppLocalizationsEn : +bluetooth String
+AppLocalizationsEn : +bluetoothLe String
+AppLocalizationsEn : +bluetoothReminderBody String
+AppLocalizationsEn : +bluetoothOpenSettings String
+AppLocalizationsEn : +ok String
+AppLocalizationsEn : +connectFirstToSwitch String
+AppLocalizationsEn : +esp32IpAddress String
+AppLocalizationsEn : +port String
+AppLocalizationsEn : +pleaseEnterEsp32Ip String
+AppLocalizationsEn : +udpConnected String
+AppLocalizationsEn : +udpConnectTimeout String
+AppLocalizationsEn : +failedToConnectUdp String
+AppLocalizationsEn : +connecting String
+AppLocalizationsEn : +connect String
+AppLocalizationsEn : +connected String
+AppLocalizationsEn : +disconnect String
+AppLocalizationsEn : +disconnected String
+AppLocalizationsEn : +connectionLost String
+AppLocalizationsEn : +mainMode String
+AppLocalizationsEn : +mainModeDescription String
+AppLocalizationsEn : +changeMode String
+AppLocalizationsEn : +controlSettings String
+AppLocalizationsEn : +maxDriveSpeed String
+AppLocalizationsEn : +reverseStrafeX String
+AppLocalizationsEn : +leftJoystickHorizontalAxis String
+AppLocalizationsEn : +reverseForwardBackY String
+AppLocalizationsEn : +leftJoystickVerticalAxis String
+AppLocalizationsEn : +appearance String
+AppLocalizationsEn : +theme String
+AppLocalizationsEn : +system String
+AppLocalizationsEn : +light String
+AppLocalizationsEn : +dark String
+AppLocalizationsEn : +about String
+AppLocalizationsEn : +appName String
+AppLocalizationsEn : +version String
+AppLocalizationsEn : +hardware String
+AppLocalizationsEn : +developer String
+AppLocalizationsEn : +organization String
+AppLocalizationsEn : +description String
+AppLocalizationsEn : +appDescription String
+AppLocalizationsEn : +translation String
+AppLocalizationsEn : +rotation String
+AppLocalizationsEn : +movementMatrix String
+AppLocalizationsEn : +hideMovementMatrix String
+AppLocalizationsEn : +showMovementMatrix String
+AppLocalizationsEn : +gpsWaiting String
+AppLocalizationsEn : +gpsFix String
+AppLocalizationsEn : +gpsNoFix String
+AppLocalizationsEn : +gpsLatLabel String
+AppLocalizationsEn : +gpsLonLabel String
+AppLocalizationsEn : +gpsSatLabel String
+AppLocalizationsEn : +gpsSpeedLabel String
+AppLocalizationsEn : +english String
+AppLocalizationsEn : +spanish String
+AppLocalizationsEn : +rememberThis String
+AppLocalizationsEn : +lockRotation String
+AppLocalizationsEn : +unlockRotation String
+AppLocalizationsEn : +preparingControllerInterface String
+AppLocalizationsEn : +moveForward String
+AppLocalizationsEn : +moveBackward String
+AppLocalizationsEn : +moveLeft String
+AppLocalizationsEn : +moveRight String
+AppLocalizationsEn : +rotateRightCmd String
+AppLocalizationsEn : +rotateLeftCmd String
+AppLocalizationsEn : +moveForwardLeft String
+AppLocalizationsEn : +moveBackwardLeft String
+AppLocalizationsEn : +moveForwardRight String
+AppLocalizationsEn : +moveBackwardRight String
+AppLocalizations <|-- AppLocalizationsEn
+
+class AppLocalizationsEs
+AppLocalizationsEs : +appTitle String
+AppLocalizationsEs : +settings String
+AppLocalizationsEs : +language String
+AppLocalizationsEs : +back String
+AppLocalizationsEs : +connection String
+AppLocalizationsEs : +connectionType String
+AppLocalizationsEs : +wifi String
+AppLocalizationsEs : +wifiAp String
+AppLocalizationsEs : +bluetooth String
+AppLocalizationsEs : +bluetoothLe String
+AppLocalizationsEs : +bluetoothReminderBody String
+AppLocalizationsEs : +bluetoothOpenSettings String
+AppLocalizationsEs : +ok String
+AppLocalizationsEs : +connectFirstToSwitch String
+AppLocalizationsEs : +esp32IpAddress String
+AppLocalizationsEs : +port String
+AppLocalizationsEs : +pleaseEnterEsp32Ip String
+AppLocalizationsEs : +udpConnected String
+AppLocalizationsEs : +udpConnectTimeout String
+AppLocalizationsEs : +failedToConnectUdp String
+AppLocalizationsEs : +connecting String
+AppLocalizationsEs : +connect String
+AppLocalizationsEs : +connected String
+AppLocalizationsEs : +disconnect String
+AppLocalizationsEs : +disconnected String
+AppLocalizationsEs : +connectionLost String
+AppLocalizationsEs : +mainMode String
+AppLocalizationsEs : +mainModeDescription String
+AppLocalizationsEs : +changeMode String
+AppLocalizationsEs : +controlSettings String
+AppLocalizationsEs : +maxDriveSpeed String
+AppLocalizationsEs : +reverseStrafeX String
+AppLocalizationsEs : +leftJoystickHorizontalAxis String
+AppLocalizationsEs : +reverseForwardBackY String
+AppLocalizationsEs : +leftJoystickVerticalAxis String
+AppLocalizationsEs : +appearance String
+AppLocalizationsEs : +theme String
+AppLocalizationsEs : +system String
+AppLocalizationsEs : +light String
+AppLocalizationsEs : +dark String
+AppLocalizationsEs : +about String
+AppLocalizationsEs : +appName String
+AppLocalizationsEs : +version String
+AppLocalizationsEs : +hardware String
+AppLocalizationsEs : +developer String
+AppLocalizationsEs : +organization String
+AppLocalizationsEs : +description String
+AppLocalizationsEs : +appDescription String
+AppLocalizationsEs : +translation String
+AppLocalizationsEs : +rotation String
+AppLocalizationsEs : +movementMatrix String
+AppLocalizationsEs : +hideMovementMatrix String
+AppLocalizationsEs : +showMovementMatrix String
+AppLocalizationsEs : +gpsWaiting String
+AppLocalizationsEs : +gpsFix String
+AppLocalizationsEs : +gpsNoFix String
+AppLocalizationsEs : +gpsLatLabel String
+AppLocalizationsEs : +gpsLonLabel String
+AppLocalizationsEs : +gpsSatLabel String
+AppLocalizationsEs : +gpsSpeedLabel String
+AppLocalizationsEs : +english String
+AppLocalizationsEs : +spanish String
+AppLocalizationsEs : +rememberThis String
+AppLocalizationsEs : +lockRotation String
+AppLocalizationsEs : +unlockRotation String
+AppLocalizationsEs : +preparingControllerInterface String
+AppLocalizationsEs : +moveForward String
+AppLocalizationsEs : +moveBackward String
+AppLocalizationsEs : +moveLeft String
+AppLocalizationsEs : +moveRight String
+AppLocalizationsEs : +rotateRightCmd String
+AppLocalizationsEs : +rotateLeftCmd String
+AppLocalizationsEs : +moveForwardLeft String
+AppLocalizationsEs : +moveBackwardLeft String
+AppLocalizationsEs : +moveForwardRight String
+AppLocalizationsEs : +moveBackwardRight String
+AppLocalizations <|-- AppLocalizationsEs
+
+class LocaleProvider
+LocaleProvider : -_locale Locale?
+LocaleProvider o-- Locale
+LocaleProvider : +locale Locale?
+LocaleProvider o-- Locale
+LocaleProvider : +setLocale() void
+LocaleProvider : +clearLocale() void
+ChangeNotifier <|-- LocaleProvider
+
+class NetworkBindingService
+NetworkBindingService : -_channel$ MethodChannel
+NetworkBindingService o-- MethodChannel
+NetworkBindingService : +bindToWifi()$ dynamic
+NetworkBindingService : +clearBinding()$ dynamic
+NetworkBindingService : +isWifiBound()$ dynamic
+
+class ThemeProvider
+ThemeProvider : -_themeMode ThemeMode
+ThemeProvider o-- ThemeMode
+ThemeProvider : +themeMode ThemeMode
+ThemeProvider o-- ThemeMode
+ThemeProvider : +setThemeMode() void
+ChangeNotifier <|-- ThemeProvider
+
+class BleTransport
+BleTransport : +deviceName$ String
+BleTransport : +serviceUuid$ Guid
+BleTransport o-- Guid
+BleTransport : +rxUuid$ Guid
+BleTransport o-- Guid
+BleTransport : +txUuid$ Guid
+BleTransport o-- Guid
+BleTransport : -_device BluetoothDevice?
+BleTransport o-- BluetoothDevice
+BleTransport : -_rxChar BluetoothCharacteristic?
+BleTransport o-- BluetoothCharacteristic
+BleTransport : -_txChar BluetoothCharacteristic?
+BleTransport o-- BluetoothCharacteristic
+BleTransport : -_notifySub StreamSubscription~List~int~~?
+BleTransport o-- StreamSubscription~List~int~~
+BleTransport : -_connectionSub StreamSubscription~BluetoothConnectionState~?
+BleTransport o-- StreamSubscription~BluetoothConnectionState~
+BleTransport : -_connected bool
+BleTransport : -_gpsTelemetry GpsTelemetry?
+BleTransport o-- GpsTelemetry
+BleTransport : +isConnected bool
+BleTransport : +gpsTelemetry GpsTelemetry?
+BleTransport o-- GpsTelemetry
+BleTransport : +connect() dynamic
+BleTransport : -_handleNotification() void
+BleTransport : -_parseGpsPacket() GpsTelemetry
+BleTransport : +disconnect() void
+BleTransport : +send() void
+BleTransport : +sendModeCommand() dynamic
+BleTransport : +sendMainModeCommand() dynamic
+BleTransport : -_buildControlPacket()$ Uint8List
+BleTransport : +buildControlPacket()$ Uint8List
+BleTransport : -_toInt16()$ int
+ControlTransport <|.. BleTransport
+
+class GpsTelemetry
+GpsTelemetry : +valid bool
+GpsTelemetry : +latitude double
+GpsTelemetry : +longitude double
+GpsTelemetry : +altitude double
+GpsTelemetry : +speedKmph double
+GpsTelemetry : +satellites int
+GpsTelemetry : +ageMs int
+GpsTelemetry : +receivedAt DateTime
+
+class ControllerMode
+<<enumeration>> ControllerMode
+ControllerMode : +index int
+ControllerMode : +values$ List~ControllerMode~
+ControllerMode : +wifiAp$ ControllerMode
+ControllerMode o-- ControllerMode
+ControllerMode : +ble$ ControllerMode
+ControllerMode o-- ControllerMode
+Enum <|.. ControllerMode
+
+class ControlTransport
+<<abstract>> ControlTransport
+ControlTransport : +isConnected bool
+ControlTransport : +gpsTelemetry GpsTelemetry?
+ControlTransport o-- GpsTelemetry
+ControlTransport : +connect()* dynamic
+ControlTransport : +disconnect()* void
+ControlTransport : +send()* void
+ControlTransport : +sendModeCommand()* dynamic
+ControlTransport : +sendMainModeCommand()* dynamic
+
+class UdpTransport
+UdpTransport : +ip String
+UdpTransport : +port int
+UdpTransport : -_socket RawDatagramSocket?
+UdpTransport o-- RawDatagramSocket
+UdpTransport : -_socketSub StreamSubscription~RawSocketEvent~?
+UdpTransport o-- StreamSubscription~RawSocketEvent~
+UdpTransport : -_healthTimer Timer?
+UdpTransport o-- Timer
+UdpTransport : -_healthCheckInProgress bool
+UdpTransport : -_initialized bool
+UdpTransport : -_targetAddress InternetAddress?
+UdpTransport o-- InternetAddress
+UdpTransport : -_targetPort int?
+UdpTransport : -_gpsTelemetry GpsTelemetry?
+UdpTransport o-- GpsTelemetry
+UdpTransport : +isConnected bool
+UdpTransport : +gpsTelemetry GpsTelemetry?
+UdpTransport o-- GpsTelemetry
+UdpTransport : +connect() dynamic
+UdpTransport : +disconnect() void
+UdpTransport : +sendModeCommand() dynamic
+UdpTransport : +sendMainModeCommand() dynamic
+UdpTransport : -_startHealthMonitor() void
+UdpTransport : +send() void
+UdpTransport : +buildSendPayload()$ String
+UdpTransport : -_parseGpsPacket() GpsTelemetry
+ControlTransport <|.. UdpTransport

@@ -65,10 +65,6 @@ class _SettingsPageState extends State<SettingsPage> {
     return null;
   }
 
-  bool _isMainMode(ControllerMode mode) {
-    return mode == _mainMode;
-  }
-
   String _shortModeLabel(ControllerMode mode) {
     switch (mode) {
       case ControllerMode.wifiAp:
@@ -166,8 +162,25 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final title = localizations?.settings ?? 'Settings';
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
-      appBar: AppBar(title: Text(localizations?.settings ?? 'Settings'), centerTitle: true),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: canPop
+            ? Semantics(
+                button: true,
+                label: '$title, ${localizations?.back ?? 'Back'}',
+                child: IconButton(
+                  tooltip: '$title, back',
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              )
+            : null,
+        title: Text(title),
+        centerTitle: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -188,28 +201,33 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildLanguageSection(AppLocalizations? localizations) {
     Locale currentLocale = widget.localeProvider?.locale ?? Localizations.localeOf(context);
     String languageCode = currentLocale.languageCode;
+    final selectedLanguage = ['en', 'es'].contains(languageCode) ? languageCode : 'en';
+    final selectedLanguageLabel = selectedLanguage == 'en'
+        ? (localizations?.english ?? 'English')
+        : (localizations?.spanish ?? 'Spanish');
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          localizations?.language ?? 'Language',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        _buildSectionHeader(localizations?.language ?? 'Language'),
         const SizedBox(height: 16),
-        ListTile(
-          title: Text(localizations?.language ?? 'Select Language'),
-          trailing: DropdownButton<String>(
-            value: ['en', 'es'].contains(languageCode) ? languageCode : 'en',
-            items: [
-              DropdownMenuItem(value: 'en', child: Text(localizations?.english ?? 'English')),
-              DropdownMenuItem(value: 'es', child: Text(localizations?.spanish ?? 'Spanish')),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                widget.localeProvider?.setLocale(Locale(value));
-              }
-            },
+        Semantics(
+          container: true,
+          label: '${localizations?.language ?? 'Select Language'}: $selectedLanguageLabel',
+          child: ListTile(
+            title: Text(localizations?.language ?? 'Select Language'),
+            trailing: DropdownButton<String>(
+              value: selectedLanguage,
+              items: [
+                DropdownMenuItem(value: 'en', child: Text(localizations?.english ?? 'English')),
+                DropdownMenuItem(value: 'es', child: Text(localizations?.spanish ?? 'Spanish')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  widget.localeProvider?.setLocale(Locale(value));
+                }
+              },
+            ),
           ),
         ),
       ],
@@ -223,36 +241,38 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          localizations?.connection ?? 'Connection',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        _buildSectionHeader(localizations?.connection ?? 'Connection'),
         const SizedBox(height: 16),
-        ListTile(
-          title: Text(localizations?.connectionType ?? 'Connection Type'),
-          trailing: DropdownButton<ControllerMode>(
-            value: _connectionMode,
-            items: [
-              DropdownMenuItem(
-                value: ControllerMode.wifiAp,
-                child: Text(localizations?.wifiAp ?? 'WiFi AP'),
-              ),
-              DropdownMenuItem(
-                value: ControllerMode.ble,
-                child: Text(localizations?.bluetoothLe ?? 'Bluetooth LE'),
-              ),
-            ],
-            onChanged: (value) async {
-              if (value == null) return;
-              setState(() => _connectionMode = value);
-            },
+        Semantics(
+          container: true,
+          label: localizations?.connectionType ?? 'Connection Type',
+          child: ListTile(
+            title: Text(localizations?.connectionType ?? 'Connection Type'),
+            trailing: DropdownButton<ControllerMode>(
+              value: _connectionMode,
+              items: [
+                DropdownMenuItem(
+                  value: ControllerMode.wifiAp,
+                  child: Text(localizations?.wifiAp ?? 'WiFi AP'),
+                ),
+                DropdownMenuItem(
+                  value: ControllerMode.ble,
+                  child: Text(localizations?.bluetoothLe ?? 'Bluetooth LE'),
+                ),
+              ],
+              onChanged: (value) async {
+                if (value == null) return;
+                setState(() => _connectionMode = value);
+              },
+            ),
           ),
         ),
         SwitchListTile(
-          title: const Text('Main mode'),
-          subtitle: const Text('Use selected mode on next startup'),
+          title: Text(localizations?.mainMode ?? 'Main mode'),
+          subtitle: Text(
+            localizations?.mainModeDescription ??
+                'Use selected mode for next startup',
+          ),
           value: isMainSelected,
           onChanged: (value) async {
             if (!value || isMainSelected) return;
@@ -364,7 +384,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                 ],
                               )
-                            : const Text('Change mode'),
+                            : Text(localizations?.changeMode ?? 'Change mode'),
                       ),
                     ),
                   ],
@@ -508,7 +528,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: rememberChoice,
-                    title: const Text('Remember this'),
+                    title: Text(localizations?.rememberThis ?? 'Remember this'),
                     controlAffinity: ListTileControlAffinity.leading,
                     onChanged: (value) {
                       setDialogState(() => rememberChoice = value == true);
@@ -642,27 +662,28 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          localizations?.controlSettings ?? 'Control Settings',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        _buildSectionHeader(localizations?.controlSettings ?? 'Control Settings'),
         const SizedBox(height: 16),
-        ListTile(
-          title: Text(localizations?.maxDriveSpeed ?? 'Max Drive Speed'),
-          subtitle: Text('${(_driveScale * 100).toStringAsFixed(0)}%'),
+        Semantics(
+          container: true,
+          label: localizations?.maxDriveSpeed ?? 'Max Drive Speed',
+          child: ListTile(
+            title: Text(localizations?.maxDriveSpeed ?? 'Max Drive Speed'),
+            subtitle: Text('${(_driveScale * 100).toStringAsFixed(0)}%'),
+          ),
         ),
         Slider(
           value: _driveScale,
           min: 0.2,
           max: 1.0,
           divisions: 16,
-          label: '${(_driveScale * 100).toStringAsFixed(0)}%',
+          label: localizations?.maxDriveSpeed ?? 'Max Drive Speed',
           onChanged: (value) {
             setState(() => _driveScale = value);
             _controlManager.setDriveScale(value);
           },
+              semanticFormatterCallback: (double value) =>
+                '${(value * 100).toStringAsFixed(0)}%',
         ),
         SwitchListTile(
           title: Text(localizations?.reverseStrafeX ?? 'Reverse Strafe (X)'),
@@ -702,39 +723,38 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          localizations?.appearance ?? 'Appearance',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        _buildSectionHeader(localizations?.appearance ?? 'Appearance'),
         const SizedBox(height: 16),
-        ListTile(
-          title: Text(localizations?.theme ?? 'Theme'),
-          trailing: DropdownButton<ThemeMode>(
-            value: widget.themeProvider!.themeMode,
-            underline: const SizedBox(),
-            items: [
-              DropdownMenuItem(
-                value: ThemeMode.system,
-                child: Text(localizations?.system ?? 'System'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.light,
-                child: Text(localizations?.light ?? 'Light'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.dark,
-                child: Text(localizations?.dark ?? 'Dark'),
-              ),
-            ],
-            onChanged: (ThemeMode? mode) {
-              if (mode != null) {
-                setState(() {
-                  widget.themeProvider!.setThemeMode(mode);
-                });
-              }
-            },
+        Semantics(
+          container: true,
+          label: '${localizations?.theme ?? 'Theme'}: ${switch (widget.themeProvider!.themeMode) { ThemeMode.system => localizations?.system ?? 'System', ThemeMode.light => localizations?.light ?? 'Light', ThemeMode.dark => localizations?.dark ?? 'Dark' }}',
+          child: ListTile(
+            title: Text(localizations?.theme ?? 'Theme'),
+            trailing: DropdownButton<ThemeMode>(
+              value: widget.themeProvider!.themeMode,
+              underline: const SizedBox(),
+              items: [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text(localizations?.system ?? 'System'),
+                ),
+                DropdownMenuItem(
+                  value: ThemeMode.light,
+                  child: Text(localizations?.light ?? 'Light'),
+                ),
+                DropdownMenuItem(
+                  value: ThemeMode.dark,
+                  child: Text(localizations?.dark ?? 'Dark'),
+                ),
+              ],
+              onChanged: (ThemeMode? mode) {
+                if (mode != null) {
+                  setState(() {
+                    widget.themeProvider!.setThemeMode(mode);
+                  });
+                }
+              },
+            ),
           ),
         ),
       ],
@@ -747,47 +767,70 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          localizations?.about ?? 'About',
+        _buildSectionHeader(localizations?.about ?? 'About'),
+        const SizedBox(height: 16),
+        _buildAboutTile(
+          icon: Icons.info_outline,
+          title: localizations?.appName ?? 'App Name',
+          subtitle: localizations?.appTitle ?? 'RC Controller',
+        ),
+        _buildAboutTile(
+          icon: Icons.tag,
+          title: localizations?.version ?? 'Version',
+          subtitle: '1.0.0',
+        ),
+        _buildAboutTile(
+          icon: Icons.memory,
+          title: localizations?.hardware ?? 'Hardware',
+          subtitle: 'ESP32-S3',
+        ),
+        _buildAboutTile(
+          icon: Icons.person,
+          title: localizations?.developer ?? 'Developer',
+          subtitle: 'Pablo Calvo Gamonal',
+        ),
+        _buildAboutTile(
+          icon: Icons.info_outline,
+          title: localizations?.organization ?? 'Organization',
+          subtitle: 'Universidad de Oviedo',
+        ),
+        _buildAboutTile(
+          icon: Icons.description,
+          title: localizations?.description ?? 'Description',
+          subtitle: localizations?.appDescription ??
+              'Remote control application for ESP32-S3 based RC vehicles',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String text) {
+    return Semantics(
+      header: true,
+      child: ExcludeSemantics(
+        child: Text(
+          text,
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        ListTile(
-          leading: Icon(Icons.info_outline),
-          title: Text(localizations?.appName ?? 'App Name'),
-          subtitle: Text(localizations?.appTitle ?? 'RC Controller'),
-        ),
-        ListTile(
-          leading: Icon(Icons.tag),
-          title: Text(localizations?.version ?? 'Version'),
-          subtitle: const Text('1.0.0'),
-        ),
-        ListTile(
-          leading: Icon(Icons.memory),
-          title: Text(localizations?.hardware ?? 'Hardware'),
-          subtitle: Text('ESP32-S3'),
-        ),
-        ListTile(
-          leading: Icon(Icons.person),
-          title: Text(localizations?.developer ?? 'Developer'),
-          subtitle: Text('Pablo Calvo Gamonal'),
-        ),
-        ListTile(
-          leading: Icon(Icons.info_outline),
-          title: Text(localizations?.organization ?? 'Organization'),
-          subtitle: Text('Universidad de Oviedo'),
-        ),
-        ListTile(
-          leading: Icon(Icons.description),
-          title: Text(localizations?.description ?? 'Description'),
-          subtitle: Text(
-            localizations?.appDescription ??
-                'Remote control application for ESP32-S3 based RC vehicles',
-          ),
-        ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildAboutTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Semantics(
+      container: true,
+      label: '$title: $subtitle',
+      child: ListTile(
+        leading: ExcludeSemantics(child: Icon(icon)),
+        title: ExcludeSemantics(child: Text(title)),
+        subtitle: ExcludeSemantics(child: Text(subtitle)),
+      ),
     );
   }
 }

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
+import 'package:flutter_rccontroller_app/transport/transport_codec.dart';
 
 class BleTransport implements ControlTransport {
   static const String deviceName = 'ESP32-BLE';
@@ -134,35 +134,11 @@ class BleTransport implements ControlTransport {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map && decoded['type'] == 'gps') {
-        _gpsTelemetry = _parseGpsPacket(decoded);
+        _gpsTelemetry = parseGpsTelemetry(decoded);
       }
     } catch (_) {
       // Ignore malformed packets.
     }
-  }
-
-  GpsTelemetry _parseGpsPacket(Map packet) {
-    double toDouble(dynamic value) {
-      if (value is num) return value.toDouble();
-      return double.tryParse(value.toString()) ?? 0.0;
-    }
-
-    int toInt(dynamic value) {
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      return int.tryParse(value.toString()) ?? 0;
-    }
-
-    return GpsTelemetry(
-      valid: packet['valid'] == true,
-      latitude: toDouble(packet['lat']),
-      longitude: toDouble(packet['lon']),
-      altitude: toDouble(packet['alt']),
-      speedKmph: toDouble(packet['speed']),
-      satellites: toInt(packet['sat']),
-      ageMs: toInt(packet['age']),
-      receivedAt: DateTime.now(),
-    );
   }
 
   @override
@@ -192,8 +168,8 @@ class BleTransport implements ControlTransport {
   }) {
     if (!_connected || _rxChar == null) return;
 
-    final payload = _buildControlPacket(tx, ty, sx, sy);
-    unawaited(_rxChar!.write(payload, withoutResponse: true).catchError((_) {}));
+    final payload = buildSendPayload(tx, ty, sx, sy);
+    unawaited(_rxChar!.write(utf8.encode(payload), withoutResponse: true).catchError((_) {}));
   }
 
   @override
@@ -240,23 +216,7 @@ class BleTransport implements ControlTransport {
     }
   }
 
-  static Uint8List _buildControlPacket(
-    double tx,
-    double ty,
-    double sx,
-    double sy,
-  ) {
-    final data = ByteData(9);
-    data.setUint8(0, 0xA1);
-    data.setInt16(1, _toInt16(tx), Endian.little);
-    data.setInt16(3, _toInt16(ty), Endian.little);
-    data.setInt16(5, _toInt16(sx), Endian.little);
-    data.setInt16(7, _toInt16(sy), Endian.little);
-    return data.buffer.asUint8List();
-  }
-
-  static int _toInt16(double value) {
-    final clamped = value.clamp(-1.0, 1.0);
-    return (clamped * 32767.0).round().clamp(-32767, 32767);
+  static String buildSendPayload(double tx, double ty, double sx, double sy) {
+    return buildControlPayload(tx, ty, sx, sy);
   }
 }

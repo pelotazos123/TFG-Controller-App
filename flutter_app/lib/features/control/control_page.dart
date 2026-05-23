@@ -44,7 +44,6 @@ class _ControlPageState extends State<ControlPage> {
 
   bool _isLandscapeLocked = false;
   bool _showMovementMatrix = true;
-  bool _wasConnected = false;
 
   final ControlManager _controlManager = ControlManager.instance;
 
@@ -53,32 +52,6 @@ class _ControlPageState extends State<ControlPage> {
     super.initState();
     SystemChrome.setPreferredOrientations(_allOrientations);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    _wasConnected = _controlManager.isConnected;
-    _controlManager.addListener(_onConnectionChanged);
-  }
-
-  void _onConnectionChanged() {
-    if (!mounted) return;
-
-    final isConnected = _controlManager.isConnected;
-    final currentRoute = ModalRoute.of(context);
-    final localizations = AppLocalizations.of(context);
-
-    if (_wasConnected && !isConnected && currentRoute?.isCurrent == true) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              localizations?.connectionLost ?? 'Connection lost',
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
-    }
-
-    _wasConnected = isConnected;
   }
 
   void _toggleMovementMatrix() {
@@ -101,7 +74,6 @@ class _ControlPageState extends State<ControlPage> {
     SystemChrome.setPreferredOrientations(_allOrientations);
     _controlManager.setMotionCommand(null);
     _controlManager.sendJoystick(0, 0, 0, 0);
-    _controlManager.removeListener(_onConnectionChanged);
     super.dispose();
   }
 
@@ -238,6 +210,7 @@ class _ControlPageState extends State<ControlPage> {
   Widget _buildStatusBar() {
     final localizations = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
     final textColor = isDark ? Colors.white : Colors.black;
     final connectedColor = isDark ? Colors.green : Colors.green[700]!;
     final disconnectedColor = isDark ? Colors.red : Colors.red[700]!;
@@ -248,6 +221,9 @@ class _ControlPageState extends State<ControlPage> {
         final isConnected = _controlManager.isConnected;
         final transport = _controlManager.transport;
         final gps = _controlManager.gpsTelemetry;
+        final rotationTooltip = _isLandscapeLocked
+          ? (localizations?.unlockRotation ?? 'Unlock rotation')
+          : (localizations?.lockRotation ?? 'Lock rotation');
 
         final connectedIcon = switch (transport) {
           UdpTransport() => Icons.wifi,
@@ -267,6 +243,7 @@ class _ControlPageState extends State<ControlPage> {
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -296,6 +273,7 @@ class _ControlPageState extends State<ControlPage> {
                   Row(
                     children: [
                       IconButton(
+                        tooltip: rotationTooltip,
                         icon: Icon(
                           _isLandscapeLocked
                               ? Icons.screen_lock_rotation
@@ -333,6 +311,7 @@ class _ControlPageState extends State<ControlPage> {
                       ),
                       IconButton(
                         icon: Icon(Icons.settings, color: textColor),
+                        tooltip: localizations?.settings ?? 'Settings',
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -350,10 +329,23 @@ class _ControlPageState extends State<ControlPage> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                _gpsLabel(gps),
-                style: TextStyle(color: gpsColor, fontWeight: FontWeight.w600),
-              ),
+              if (isConnected && gps != null)
+                _buildGpsTelemetryCard(
+                  gps: gps,
+                  localizations: localizations,
+                  connectedColor: connectedColor,
+                  disconnectedColor: disconnectedColor,
+                  isLandscape: isLandscape,
+                )
+              else
+                Text(
+                  _gpsLabel(gps, isConnected: isConnected),
+                  style: TextStyle(
+                    color: gpsColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
             ],
           ),
         );
@@ -361,8 +353,282 @@ class _ControlPageState extends State<ControlPage> {
     );
   }
 
-  String _gpsLabel(GpsTelemetry? gps) {
+  Widget _buildGpsTelemetryCard({
+    required GpsTelemetry gps,
+    required AppLocalizations? localizations,
+    required Color connectedColor,
+    required Color disconnectedColor,
+    required bool isLandscape,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+    final surfaceColor = isDark
+        ? Colors.white.withValues(alpha: 0.05)
+        : Colors.white;
+    final borderColor = (gps.valid ? connectedColor : disconnectedColor)
+        .withValues(alpha: 0.35);
+    final accentColor = gps.valid ? connectedColor : disconnectedColor;
+    final mutedTextColor = textColor.withValues(alpha: 0.66);
+    final labelFontSize = isLandscape ? 8.0 : 10.0;
+    final valueFontSize = isLandscape ? 10.5 : 13.0;
+    final tileWidth = isLandscape ? 104.0 : 150.0;
+
+    final state = gps.valid
+        ? (localizations?.gpsFix ?? 'FIX')
+        : (localizations?.gpsNoFix ?? 'NO FIX');
+    final lat = gps.latitude.toStringAsFixed(6);
+    final lon = gps.longitude.toStringAsFixed(6);
+    final speed = gps.speedKmph.toStringAsFixed(1);
+    final altitude = gps.altitude.toStringAsFixed(1);
+    final ageSeconds = (gps.ageMs / 1000).toStringAsFixed(1);
+    final latLabel = localizations?.gpsLatLabel ?? 'lat';
+    final lonLabel = localizations?.gpsLonLabel ?? 'lon';
+    final satLabel = localizations?.gpsSatLabel ?? 'sat';
+    final speedLabel = localizations?.gpsSpeedLabel ?? 'speed';
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isLandscape ? 8 : 14,
+        vertical: isLandscape ? 6 : 14,
+      ),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+            blurRadius: isLandscape ? 8 : 14,
+            offset: Offset(0, isLandscape ? 3 : 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: isLandscape ? 28 : 42,
+                height: isLandscape ? 28 : 42,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.gps_fixed,
+                  color: accentColor,
+                  size: isLandscape ? 15 : 22,
+                ),
+              ),
+              SizedBox(width: isLandscape ? 6 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations?.gpsWaiting ?? 'GPS: waiting for telemetry...',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: isLandscape ? 11.5 : 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (!isLandscape) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        '$state · ${gps.satellites} $satLabel · $ageSeconds s',
+                        style: TextStyle(
+                          color: mutedTextColor,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!isLandscape)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    state,
+                    style: TextStyle(
+                      color: accentColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: isLandscape ? 4 : 12),
+          if (isLandscape)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildGpsMetric(
+                    label: latLabel,
+                    value: lat,
+                    accentColor: accentColor,
+                    textColor: textColor,
+                    width: tileWidth,
+                    labelFontSize: labelFontSize,
+                    valueFontSize: valueFontSize,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildGpsMetric(
+                    label: lonLabel,
+                    value: lon,
+                    accentColor: accentColor,
+                    textColor: textColor,
+                    width: tileWidth,
+                    labelFontSize: labelFontSize,
+                    valueFontSize: valueFontSize,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildGpsMetric(
+                    label: speedLabel,
+                    value: '$speed km/h',
+                    accentColor: accentColor,
+                    textColor: textColor,
+                    width: tileWidth,
+                    labelFontSize: labelFontSize,
+                    valueFontSize: valueFontSize,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildGpsMetric(
+                    label: 'alt',
+                    value: '$altitude m',
+                    accentColor: accentColor,
+                    textColor: textColor,
+                    width: tileWidth,
+                    labelFontSize: labelFontSize,
+                    valueFontSize: valueFontSize,
+                  ),
+                ),
+              ],
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildGpsMetric(
+                  label: latLabel,
+                  value: lat,
+                  accentColor: accentColor,
+                  textColor: textColor,
+                  width: tileWidth,
+                  labelFontSize: labelFontSize,
+                  valueFontSize: valueFontSize,
+                ),
+                _buildGpsMetric(
+                  label: lonLabel,
+                  value: lon,
+                  accentColor: accentColor,
+                  textColor: textColor,
+                  width: tileWidth,
+                  labelFontSize: labelFontSize,
+                  valueFontSize: valueFontSize,
+                ),
+                _buildGpsMetric(
+                  label: speedLabel,
+                  value: '$speed km/h',
+                  accentColor: accentColor,
+                  textColor: textColor,
+                  width: tileWidth,
+                  labelFontSize: labelFontSize,
+                  valueFontSize: valueFontSize,
+                ),
+                _buildGpsMetric(
+                  label: 'alt',
+                  value: '$altitude m',
+                  accentColor: accentColor,
+                  textColor: textColor,
+                  width: tileWidth,
+                  labelFontSize: labelFontSize,
+                  valueFontSize: valueFontSize,
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGpsMetric({
+    required String label,
+    required String value,
+    required Color accentColor,
+    required Color textColor,
+    required double width,
+    required double labelFontSize,
+    required double valueFontSize,
+  }) {
+    return Semantics(
+      container: true,
+      label: '${label.toUpperCase()}: $value',
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: ExcludeSemantics(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.6),
+                  fontSize: labelFontSize,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: valueFontSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _gpsLabel(GpsTelemetry? gps, {required bool isConnected}) {
     final localizations = AppLocalizations.of(context);
+
+    if (!isConnected) {
+      return localizations?.gpsWaiting ?? 'GPS: searching...';
+    }
 
     if (gps == null) {
       return localizations?.gpsWaiting ?? 'GPS: waiting for telemetry...';
@@ -401,43 +667,53 @@ class _ControlPageState extends State<ControlPage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(label, style: TextStyle(color: textColor)),
+        Semantics(
+          header: true,
+          label: label,
+          child: ExcludeSemantics(
+            child: Text(label, style: TextStyle(color: textColor)),
+          ),
+        ),
         const SizedBox(height: 12),
-        GestureDetector(
-          onPanStart: (details) => _handleJoystickPan(
-            localPosition: details.localPosition,
-            joystickSize: joystickSize,
-            translateFactor: translateFactor,
-            horizontalOnly: horizontalOnly,
-            onChanged: onChanged,
-          ),
-          onPanUpdate: (details) => _handleJoystickPan(
-            localPosition: details.localPosition,
-            joystickSize: joystickSize,
-            translateFactor: translateFactor,
-            horizontalOnly: horizontalOnly,
-            onChanged: onChanged,
-          ),
-          onPanEnd: (_) => onChanged(Offset.zero),
-          child: Container(
-            width: joystickSize,
-            height: joystickSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: joystickBgColor,
+        Semantics(
+          label: label,
+          value: '${(value.dx * 100).toStringAsFixed(0)}%, ${(value.dy * 100).toStringAsFixed(0)}%',
+          child: GestureDetector(
+            onPanStart: (details) => _handleJoystickPan(
+              localPosition: details.localPosition,
+              joystickSize: joystickSize,
+              translateFactor: translateFactor,
+              horizontalOnly: horizontalOnly,
+              onChanged: onChanged,
             ),
-            child: Center(
-              child: Transform.translate(
-                offset: Offset(
-                  value.dx * translateFactor,
-                  value.dy * translateFactor,
-                ),
-                child: Container(
-                  width: thumbSize,
-                  height: thumbSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: joystickThumbColor,
+            onPanUpdate: (details) => _handleJoystickPan(
+              localPosition: details.localPosition,
+              joystickSize: joystickSize,
+              translateFactor: translateFactor,
+              horizontalOnly: horizontalOnly,
+              onChanged: onChanged,
+            ),
+            onPanEnd: (_) => onChanged(Offset.zero),
+            child: Container(
+              width: joystickSize,
+              height: joystickSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: joystickBgColor,
+              ),
+              child: Center(
+                child: Transform.translate(
+                  offset: Offset(
+                    value.dx * translateFactor,
+                    value.dy * translateFactor,
+                  ),
+                  child: Container(
+                    width: thumbSize,
+                    height: thumbSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: joystickThumbColor,
+                    ),
                   ),
                 ),
               ),
@@ -543,35 +819,30 @@ class _ControlPageState extends State<ControlPage> {
             _buildDirectionButton(
               direction: MotionCommand.forward,
               icon: Icons.keyboard_arrow_up,
-              label: 'F',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.backward,
               icon: Icons.keyboard_arrow_down,
-              label: 'B',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.left,
               icon: Icons.keyboard_arrow_left,
-              label: 'L',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.right,
               icon: Icons.keyboard_arrow_right,
-              label: 'R',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.rotateRight,
               icon: Icons.rotate_right,
-              label: 'CW',
               size: buttonSize,
             ),
           ],
@@ -583,35 +854,30 @@ class _ControlPageState extends State<ControlPage> {
             _buildDirectionButton(
               direction: MotionCommand.forwardLeft,
               icon: Icons.north_west,
-              label: 'G',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.backwardLeft,
               icon: Icons.south_west,
-              label: 'H',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.forwardRight,
               icon: Icons.north_east,
-              label: 'I',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.backwardRight,
               icon: Icons.south_east,
-              label: 'J',
               size: buttonSize,
             ),
             SizedBox(width: spacing),
             _buildDirectionButton(
               direction: MotionCommand.rotateLeft,
               icon: Icons.rotate_left,
-              label: 'CCW',
               size: buttonSize,
             ),
           ],
@@ -623,7 +889,6 @@ class _ControlPageState extends State<ControlPage> {
   Widget _buildDirectionButton({
     required MotionCommand direction,
     required IconData icon,
-    required String label,
     required double size,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -631,43 +896,67 @@ class _ControlPageState extends State<ControlPage> {
     final baseColor = isDark ? Colors.blueGrey.shade800 : Colors.grey.shade400;
     final activeColor = isDark ? Colors.blue.shade500 : Colors.blue.shade700;
     const fgColor = Colors.white;
+    final label = _motionCommandLabel(direction);
 
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => _setMotionCommand(direction),
-      onPointerUp: (_) => _clearMotionCommand(),
-      onPointerCancel: (_) => _clearMotionCommand(),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isActive ? activeColor : baseColor,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isActive ? 0.35 : 0.20),
-              blurRadius: isActive ? 16 : 10,
-              offset: const Offset(0, 5),
+    return Semantics(
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => _setMotionCommand(direction),
+          onPointerUp: (_) => _clearMotionCommand(),
+          onPointerCancel: (_) => _clearMotionCommand(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: isActive ? activeColor : baseColor,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isActive ? 0.35 : 0.20),
+                  blurRadius: isActive ? 16 : 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: fgColor, size: size * 0.45),
-            Text(
-              label,
-              style: const TextStyle(
-                color: fgColor,
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.4,
+            child: Center(
+              child: ExcludeSemantics(
+                child: Icon(icon, color: fgColor, size: size * 0.45),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  String _motionCommandLabel(MotionCommand direction) {
+    final loc = AppLocalizations.of(context);
+    switch (direction) {
+      case MotionCommand.forward:
+        return loc?.moveForward ?? 'Move forward';
+      case MotionCommand.backward:
+        return loc?.moveBackward ?? 'Move backward';
+      case MotionCommand.left:
+        return loc?.moveLeft ?? 'Move left';
+      case MotionCommand.right:
+        return loc?.moveRight ?? 'Move right';
+      case MotionCommand.rotateRight:
+        return loc?.rotateRightCmd ?? 'Rotate right';
+      case MotionCommand.rotateLeft:
+        return loc?.rotateLeftCmd ?? 'Rotate left';
+      case MotionCommand.forwardLeft:
+        return loc?.moveForwardLeft ?? 'Move forward left';
+      case MotionCommand.backwardLeft:
+        return loc?.moveBackwardLeft ?? 'Move backward left';
+      case MotionCommand.forwardRight:
+        return loc?.moveForwardRight ?? 'Move forward right';
+      case MotionCommand.backwardRight:
+        return loc?.moveBackwardRight ?? 'Move backward right';
+    }
   }
 }

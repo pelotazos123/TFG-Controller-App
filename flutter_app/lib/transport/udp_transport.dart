@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/services/network_binding_service.dart';
+import 'package:flutter_rccontroller_app/transport/transport_codec.dart';
 
 class UdpTransport implements ControlTransport {
   final String ip;
@@ -70,7 +71,7 @@ class UdpTransport implements ControlTransport {
             }
 
             if (decoded is Map && decoded['type'] == 'gps') {
-              _gpsTelemetry = _parseGpsPacket(decoded);
+              _gpsTelemetry = parseGpsTelemetry(decoded);
               continue;
             }
           } catch (_) {
@@ -194,7 +195,7 @@ class UdpTransport implements ControlTransport {
       return;
     }
 
-    final payload = jsonEncode({'tx': tx, 'ty': ty, 'sx': sx, 'sy': sy});
+    final payload = buildControlPayload(tx, ty, sx, sy);
     try {
       _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
     } on SocketException {
@@ -202,27 +203,8 @@ class UdpTransport implements ControlTransport {
     }
   }
 
-  GpsTelemetry _parseGpsPacket(Map packet) {
-    double toDouble(dynamic value) {
-      if (value is num) return value.toDouble();
-      return double.tryParse(value.toString()) ?? 0.0;
-    }
-
-    int toInt(dynamic value) {
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      return int.tryParse(value.toString()) ?? 0;
-    }
-
-    return GpsTelemetry(
-      valid: packet['valid'] == true,
-      latitude: toDouble(packet['lat']),
-      longitude: toDouble(packet['lon']),
-      altitude: toDouble(packet['alt']),
-      speedKmph: toDouble(packet['speed']),
-      satellites: toInt(packet['sat']),
-      ageMs: toInt(packet['age']),
-      receivedAt: DateTime.now(),
-    );
+  // Public helper for tests to inspect the JSON payload sent over UDP.
+  static String buildSendPayload(double tx, double ty, double sx, double sy) {
+    return buildControlPayload(tx, ty, sx, sy);
   }
 }

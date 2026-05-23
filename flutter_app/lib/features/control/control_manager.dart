@@ -112,6 +112,11 @@ class ControlManager extends ChangeNotifier {
     if (_activeMotion == direction && _activeMotionPower == clampedPower) {
       return;
     }
+    if (direction == null) {
+      _tx = 0.0;
+      _ty = 0.0;
+      _sx = 0.0;
+    }
     _activeMotion = direction;
     _activeMotionPower = clampedPower;
     _transmitCurrentState();

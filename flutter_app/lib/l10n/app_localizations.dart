@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
   /// No description provided for @connection.
   ///
   /// In en, this message translates to:
@@ -248,17 +254,29 @@ abstract class AppLocalizations {
   /// **'Connection lost'**
   String get connectionLost;
 
+  /// No description provided for @mainMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Main mode'**
+  String get mainMode;
+
+  /// No description provided for @mainModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use selected mode for next startup'**
+  String get mainModeDescription;
+
+  /// No description provided for @changeMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Change mode'**
+  String get changeMode;
+
   /// No description provided for @controlSettings.
   ///
   /// In en, this message translates to:
   /// **'Control Settings'**
   String get controlSettings;
-
-  /// No description provided for @joystickDeadZone.
-  ///
-  /// In en, this message translates to:
-  /// **'Joystick Dead Zone'**
-  String get joystickDeadZone;
 
   /// No description provided for @maxDriveSpeed.
   ///
@@ -451,6 +469,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spanish'**
   String get spanish;
+
+  /// No description provided for @rememberThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember this'**
+  String get rememberThis;
+
+  /// No description provided for @lockRotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock rotation'**
+  String get lockRotation;
+
+  /// No description provided for @unlockRotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock rotation'**
+  String get unlockRotation;
+
+  /// No description provided for @preparingControllerInterface.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your controller interface'**
+  String get preparingControllerInterface;
+
+  /// No description provided for @moveForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Move forward'**
+  String get moveForward;
+
+  /// No description provided for @moveBackward.
+  ///
+  /// In en, this message translates to:
+  /// **'Move backward'**
+  String get moveBackward;
+
+  /// No description provided for @moveLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Move left'**
+  String get moveLeft;
+
+  /// No description provided for @moveRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Move right'**
+  String get moveRight;
+
+  /// No description provided for @rotateRightCmd.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate right'**
+  String get rotateRightCmd;
+
+  /// No description provided for @rotateLeftCmd.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate left'**
+  String get rotateLeftCmd;
+
+  /// No description provided for @moveForwardLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Move forward left'**
+  String get moveForwardLeft;
+
+  /// No description provided for @moveBackwardLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Move backward left'**
+  String get moveBackwardLeft;
+
+  /// No description provided for @moveForwardRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Move forward right'**
+  String get moveForwardRight;
+
+  /// No description provided for @moveBackwardRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Move backward right'**
+  String get moveBackwardRight;
 }
 
 class _AppLocalizationsDelegate

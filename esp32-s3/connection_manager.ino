@@ -34,16 +34,19 @@ void requestMainModeChange(const char* modeValue, const char* ssid, const char* 
 void activateMainMode() {
   switch (mainMode) {
     case MODE_BLE:
+      Serial.println("Main mode -> BLE");
       activateBLE();
       break;
     case MODE_WIFI_AP:
     default:
+      Serial.println("Main mode -> WiFi AP");
       activateWIFI_AP();
       break;
   }
 }
 
 void activateFallbackMode() {
+  Serial.println("Fallback -> WiFi AP");
   activateWIFI_AP();
 }
 

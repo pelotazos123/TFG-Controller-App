@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String get back => 'Back';
+
+  @override
   String get connection => 'Connection';
 
   @override
@@ -87,10 +90,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionLost => 'Connection lost';
 
   @override
-  String get controlSettings => 'Control Settings';
+  String get mainMode => 'Main mode';
 
   @override
-  String get joystickDeadZone => 'Joystick Dead Zone';
+  String get mainModeDescription => 'Use selected mode for next startup';
+
+  @override
+  String get changeMode => 'Change mode';
+
+  @override
+  String get controlSettings => 'Control Settings';
 
   @override
   String get maxDriveSpeed => 'Max Drive Speed';
@@ -188,4 +197,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spanish => 'Spanish';
+
+  @override
+  String get rememberThis => 'Remember this';
+
+  @override
+  String get lockRotation => 'Lock rotation';
+
+  @override
+  String get unlockRotation => 'Unlock rotation';
+
+  @override
+  String get preparingControllerInterface =>
+      'Preparing your controller interface';
+
+  @override
+  String get moveForward => 'Move forward';
+
+  @override
+  String get moveBackward => 'Move backward';
+
+  @override
+  String get moveLeft => 'Move left';
+
+  @override
+  String get moveRight => 'Move right';
+
+  @override
+  String get rotateRightCmd => 'Rotate right';
+
+  @override
+  String get rotateLeftCmd => 'Rotate left';
+
+  @override
+  String get moveForwardLeft => 'Move forward left';
+
+  @override
+  String get moveBackwardLeft => 'Move backward left';
+
+  @override
+  String get moveForwardRight => 'Move forward right';
+
+  @override
+  String get moveBackwardRight => 'Move backward right';
 }

@@ -40,6 +40,11 @@ Rear driver (L298N #2):
 - REAR_IN4 -> GPIO36
 - REAR_ENB -> GPIO35
 
+### 1.4 Mode button (physical toggle)
+- GPIO41 configured as INPUT_PULLUP
+- Short press toggles between BLE controller mode and the main mode
+- If the controller is not found within 50 seconds, firmware returns to main mode
+
 ## 2) Software requirements
 
 - Arduino IDE 2.x
@@ -62,13 +67,18 @@ In esp32-s3.ino, choose one startup mode in setup():
 
 Current default is AP mode.
 
-### 3.2 AP mode defaults
+### 3.2 BLE controller settings
+In params.h:
+- BLE_CONTROLLER_NAME: update to the advertised name of your controller
+- BLE_CONTROLLER_CONNECT_TIMEOUT_MS: controller timeout before fallback
+
+### 3.3 AP mode defaults
 Defined in wifi_ap.ino:
 - SSID: ESP32_RC
 - Password: 123456789
 - UDP port: 4210
 
-### 3.3 BLE mode
+### 3.4 BLE mode
 - Device name: ESP32-BLE
 - Service UUID: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
 - RX characteristic: 6E400002-B5A3-F393-E0A9-E50E24DCCA9E
@@ -130,14 +140,20 @@ Sent once per second to the active control endpoint:
 	"age": 520
 }
 
-## 6) Quick validation checklist
+## 6) Control protocol (BLE)
+
+BLE uses the same JSON control shape as UDP for `tx`, `ty`, `sx`, and `sy`.
+
+GPS telemetry is still sent as JSON notifications on the TX characteristic.
+
+## 7) Quick validation checklist
 
 - Motors stay stopped at boot
 - UDP control packets are visible on serial output
 - Robot stops if app closes or packets are interrupted
 - GPS valid field changes to true when fix is available
 
-## 7) Common issues
+## 8) Common issues
 
 - No upload: verify board/port and USB cable (data cable, not charge-only)
 - No GPS data: verify TX/RX wiring and antenna visibility to open sky

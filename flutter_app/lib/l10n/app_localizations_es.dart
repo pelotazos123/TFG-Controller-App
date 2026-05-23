@@ -18,6 +18,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get language => 'Idioma';
 
   @override
+  String get back => 'Atrás';
+
+  @override
   String get connection => 'Conexión';
 
   @override
@@ -87,10 +90,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get connectionLost => 'Conexión perdida';
 
   @override
-  String get controlSettings => 'Ajustes de control';
+  String get mainMode => 'Modo principal';
 
   @override
-  String get joystickDeadZone => 'Zona muerta del joystick';
+  String get mainModeDescription =>
+      'Usar el modo seleccionado en el próximo inicio';
+
+  @override
+  String get changeMode => 'Cambiar modo';
+
+  @override
+  String get controlSettings => 'Ajustes de control';
 
   @override
   String get maxDriveSpeed => 'Velocidad máxima';
@@ -189,4 +199,47 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get spanish => 'Español';
+
+  @override
+  String get rememberThis => 'Recordar esto';
+
+  @override
+  String get lockRotation => 'Bloquear rotación';
+
+  @override
+  String get unlockRotation => 'Desbloquear rotación';
+
+  @override
+  String get preparingControllerInterface =>
+      'Preparando la interfaz del controlador';
+
+  @override
+  String get moveForward => 'Avanzar';
+
+  @override
+  String get moveBackward => 'Retroceder';
+
+  @override
+  String get moveLeft => 'Mover a la izquierda';
+
+  @override
+  String get moveRight => 'Mover a la derecha';
+
+  @override
+  String get rotateRightCmd => 'Girar a la derecha';
+
+  @override
+  String get rotateLeftCmd => 'Girar a la izquierda';
+
+  @override
+  String get moveForwardLeft => 'Avanzar a la izquierda';
+
+  @override
+  String get moveBackwardLeft => 'Retroceder a la izquierda';
+
+  @override
+  String get moveForwardRight => 'Avanzar a la derecha';
+
+  @override
+  String get moveBackwardRight => 'Retroceder a la derecha';
 }

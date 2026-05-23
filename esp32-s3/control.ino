@@ -10,10 +10,6 @@ const float MOTOR_SLEW_RATE_PER_SEC = 10.0f;
 const float STRAFE_INPUT_SIGN = -1.0f;
 const float THROTTLE_INPUT_SIGN = -1.0f;
 
-// Favor cardinal directions when one axis clearly dominates.
-const float AXIS_DOMINANCE_RATIO = 1.35f;
-const float AXIS_CROSS_DEADBAND = 0.18f;
-
 // Minimum effective power where the car reliably moves.
 const float MIN_EFFECTIVE_POWER = 0.45f;
 
@@ -39,22 +35,6 @@ static float clamp(float v, float minV, float maxV) {
 	if (v > maxV) return maxV;
 	if (v < minV) return minV;
 	return v;
-}
-
-static void applyAxisAssist(float &forward, float &strafe) {
-	float absForward = fabs(forward);
-	float absStrafe = fabs(strafe);
-
-	if (absForward == 0.0f && absStrafe == 0.0f) return;
-
-	if (absForward >= absStrafe * AXIS_DOMINANCE_RATIO || absStrafe < AXIS_CROSS_DEADBAND) {
-		strafe = 0.0f;
-		return;
-	}
-
-	if (absStrafe >= absForward * AXIS_DOMINANCE_RATIO || absForward < AXIS_CROSS_DEADBAND) {
-		forward = 0.0f;
-	}
 }
 
 
@@ -282,8 +262,6 @@ void controlUpdate() {
 	float strafe = tx * STRAFE_INPUT_SIGN;
 	float forward = sy * THROTTLE_INPUT_SIGN;
 	float rotate = sx;
-
-	applyAxisAssist(forward, strafe);
 
 	float frontLeft = 0.0f;
 	float frontRight = 0.0f;
