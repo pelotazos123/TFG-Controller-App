@@ -47,10 +47,37 @@ const unsigned long MODE_BUTTON_DEBOUNCE_MS = 40;
 const char* BLE_CONTROLLER_NAME = "Wireless Controller";
 const unsigned long BLE_CONTROLLER_CONNECT_TIMEOUT_MS = 50000;
 
+// ========= Wi-Fi AP =========
+const char AP_SSID[] = "ESP32_RC";
+const char AP_PASS[] = "123456789";
+
 // ========= UDP =========
 extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
 void udpResetControlEndpoint();
+
+// ========= JSON payload sizing =========
+// Max lengths for incoming mode-change payloads.
+constexpr size_t JSON_MAX_SSID_LEN = 32;
+constexpr size_t JSON_MAX_PASS_LEN = 64;
+constexpr size_t JSON_MAX_MODE_LEN = 8;
+
+// Control packet: type + tx/ty/sx/sy.
+constexpr size_t JSON_CONTROL_CAPACITY = JSON_OBJECT_SIZE(5) + 32;
+// Mode packet: type + mode + ssid + pass.
+constexpr size_t JSON_MODE_CAPACITY =
+  JSON_OBJECT_SIZE(4) + JSON_MAX_MODE_LEN + JSON_MAX_SSID_LEN + JSON_MAX_PASS_LEN + 24;
+// Shared RX capacity (largest expected inbound payload).
+constexpr size_t JSON_RX_CAPACITY =
+  (JSON_MODE_CAPACITY > JSON_CONTROL_CAPACITY)
+    ? JSON_MODE_CAPACITY
+    : JSON_CONTROL_CAPACITY;
+
+// ========= Serial logging =========
+// Set these to false to reduce Serial Monitor noise.
+const bool LOG_TRANSPORT_MESSAGES = true;
+const bool LOG_TRANSPORT_ENDPOINTS = true;
+const bool LOG_CONTROL_PACKETS = false;
 
 // ========= Timing =========
 extern const unsigned long TIMEOUT_MS = 200;
@@ -68,6 +95,19 @@ enum Mode {
   MODE_WIFI_AP,
   MODE_BLE,
   MODE_BLE_CONTROLLER
+};
+
+struct WheelTargets {
+  float frontLeft;
+  float frontRight;
+  float rearLeft;
+  float rearRight;
+};
+
+struct DirectionVector {
+  float strafe;
+  float forward;
+  float rotate;
 };
 
 extern Mode currentMode;
@@ -101,6 +141,10 @@ void saveMainMode(Mode mode);
 void UDPtransport();
 void BLEtransport();
 void BLEControllerTransport();
+
+// ========= Transport JSON =========
+bool handleModeCommand(JsonDocument& doc);
+bool applyControlPacket(JsonDocument& doc, unsigned long& lastPacketMs);
 
 // ========= GPS API =========
 void setupGPS();

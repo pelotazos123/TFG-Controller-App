@@ -36,8 +36,14 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
         setState(() {
           _showSplash = false;
         });
-      })
-      ..forward();
+      });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _splashController.forward();
+    });
   }
 
   @override
@@ -165,7 +171,7 @@ class _WelcomeSplashPage extends StatelessWidget {
                     ],
                   ),
                   child: Image.asset(
-                    'web/icons/Icon-192.png',
+                    'assets/icons/final-logo-amplified.png',
                     fit: BoxFit.contain,
                   ),
                 ),

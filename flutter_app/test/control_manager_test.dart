@@ -80,7 +80,7 @@ void main() {
     final transport = FakeTransport();
     manager.setTransport(transport);
 
-    manager.sendJoystick(0.5, -0.7, 0.2, 0.0);
+    manager.sendJoystick(0.5, -0.7, 0.2);
 
     expect(transport.sent, hasLength(1));
     final sent = transport.sent.single;
@@ -98,7 +98,7 @@ void main() {
     manager.setReverseSteering(true);
     manager.setReverseThrottle(true);
 
-    manager.sendJoystick(0.8, -0.4, 0.6, 0.0);
+    manager.sendJoystick(0.8, -0.4, 0.6);
 
     expect(transport.sent, hasLength(1));
     final sent = transport.sent.single;
@@ -112,7 +112,7 @@ void main() {
     final transport = FakeTransport();
     manager.setTransport(transport);
 
-    manager.sendJoystick(0.2, 0.1, 0.3, 0.0);
+    manager.sendJoystick(0.2, 0.1, 0.3);
     transport.sent.clear();
 
     manager.setMotionCommand(MotionCommand.forwardLeft, power: 0.5);
@@ -128,7 +128,7 @@ void main() {
     final transport = FakeTransport();
     manager.setTransport(transport);
 
-    manager.sendJoystick(0.7, 0.0, 0.4, 0.0);
+    manager.sendJoystick(0.7, 0.0, 0.4);
     transport.sent.clear();
 
     manager.setMotionCommand(MotionCommand.forwardLeft, power: 0.5);
@@ -160,7 +160,7 @@ void main() {
     );
     transport.setGps(gpsOne);
 
-    manager.sendJoystick(0.0, 0.0, 0.0, 0.0);
+    manager.sendJoystick(0.0, 0.0, 0.0);
     expect(manager.gpsTelemetry, gpsOne);
 
     final gpsTwo = GpsTelemetry(
@@ -175,7 +175,7 @@ void main() {
     );
     transport.setGps(gpsTwo);
 
-    manager.sendJoystick(0.0, 0.0, 0.0, 0.0);
+    manager.sendJoystick(0.0, 0.0, 0.0);
     expect(manager.gpsTelemetry, gpsTwo);
   });
 

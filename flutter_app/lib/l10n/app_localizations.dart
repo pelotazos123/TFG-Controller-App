@@ -308,6 +308,18 @@ abstract class AppLocalizations {
   /// **'Left joystick vertical axis'**
   String get leftJoystickVerticalAxis;
 
+  /// No description provided for @showTelemetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Show telemetry'**
+  String get showTelemetry;
+
+  /// No description provided for @showTelemetryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show GPS telemetry on the control screen'**
+  String get showTelemetryDescription;
+
   /// No description provided for @appearance.
   ///
   /// In en, this message translates to:
@@ -373,18 +385,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Organization'**
   String get organization;
-
-  /// No description provided for @description.
-  ///
-  /// In en, this message translates to:
-  /// **'Description'**
-  String get description;
-
-  /// No description provided for @appDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Remote control application for ESP32-S3 based RC vehicles'**
-  String get appDescription;
 
   /// No description provided for @translation.
   ///
@@ -553,6 +553,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move backward right'**
   String get moveBackwardRight;
+
+  /// No description provided for @invalidIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid IPv4 address'**
+  String get invalidIpAddress;
+
+  /// No description provided for @invalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid port (1-65535)'**
+  String get invalidPort;
 }
 
 class _AppLocalizationsDelegate

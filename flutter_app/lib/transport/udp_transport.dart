@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/services/network_binding_service.dart';
-import 'package:flutter_rccontroller_app/transport/transport_codec.dart';
+import 'package:flutter_rccontroller_app/transport/transport_message.dart';
 
 class UdpTransport implements ControlTransport {
   final String ip;
@@ -20,6 +22,12 @@ class UdpTransport implements ControlTransport {
   int? _targetPort;
   GpsTelemetry? _gpsTelemetry;
 
+  bool get _hasSendEndpoint =>
+      _initialized &&
+      _socket != null &&
+      _targetAddress != null &&
+      _targetPort != null;
+
   UdpTransport({required this.ip, required this.port});
 
   @override
@@ -31,85 +39,105 @@ class UdpTransport implements ControlTransport {
   @override
   Future<void> connect() async {
     if (_initialized) return;
-
-    await NetworkBindingService.bindToWifi(targetHost: ip);
-
-    final configuredAddress = InternetAddress(ip);
-    _targetAddress = configuredAddress;
-    _targetPort = port;
-
-    final probeAddresses = <InternetAddress>[configuredAddress];
-    const apDefaultIp = '192.168.4.1';
-    if (configuredAddress.type == InternetAddressType.IPv4 &&
-        configuredAddress.address != apDefaultIp) {
-      probeAddresses.add(InternetAddress(apDefaultIp));
-    }
-
-    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    _socket = socket;
-
-    final completer = Completer<void>();
-
-    _socketSub = socket.listen(
-      (event) {
-        if (event != RawSocketEvent.read) return;
-
-        Datagram? datagram;
-        while ((datagram = socket.receive()) != null) {
-          final dg = datagram!;
-
-          final raw = utf8.decode(dg.data, allowMalformed: true);
-          try {
-            final decoded = jsonDecode(raw);
-            if (decoded is Map && decoded['type'] == 'hello_ack') {
-              // Lock endpoint to the responder so AP/STA differences in source
-              // endpoint handling do not break the handshake.
-              _targetAddress = dg.address;
-              _targetPort = dg.port;
-              if (!completer.isCompleted) completer.complete();
-              return;
-            }
-
-            if (decoded is Map && decoded['type'] == 'gps') {
-              _gpsTelemetry = parseGpsTelemetry(decoded);
-              continue;
-            }
-          } catch (_) {
-            // Ignore non-JSON packets.
-          }
-        }
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
-        }
-      },
-    );
-
-    final hello = jsonEncode({'type': 'hello'});
-    final helloPayload = utf8.encode(hello);
-    
-    Timer? helloTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (!completer.isCompleted) {
-        for (final address in probeAddresses) {
-          socket.send(helloPayload, address, port);
-        }
-      }
-    });
-
-    for (final address in probeAddresses) {
-      socket.send(helloPayload, address, port);
-    }
+    bool bound = false;
 
     try {
-      await completer.future.timeout(const Duration(seconds: 5));
-      _initialized = true;
-      _startHealthMonitor();
+      await NetworkBindingService.bindToWifi(targetHost: ip);
+      bound = true;
+
+      final configuredAddress = InternetAddress(ip);
+      _targetAddress = configuredAddress;
+      _targetPort = port;
+
+      final probeAddresses = <InternetAddress>[configuredAddress];
+      const apDefaultIp = '192.168.4.1';
+      if (configuredAddress.type == InternetAddressType.IPv4 &&
+          configuredAddress.address != apDefaultIp) {
+        probeAddresses.add(InternetAddress(apDefaultIp));
+      }
+
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      _socket = socket;
+
+      final completer = Completer<void>();
+
+      _socketSub = socket.listen(
+        (event) {
+          if (event != RawSocketEvent.read) return;
+
+          Datagram? datagram;
+          while ((datagram = socket.receive()) != null) {
+            final dg = datagram!;
+
+            if (dg.data.length > maxInboundPacketBytes) {
+              continue;
+            }
+
+            final raw = _decodePacket(dg.data);
+            if (raw == null || !_looksLikeJson(raw)) {
+              continue;
+            }
+
+            try {
+              final decoded = jsonDecode(raw);
+              final pkt = parseIncomingPacket(decoded);
+              if (pkt != null) {
+                if (pkt.type == 'hello_ack') {
+                  // Lock endpoint to the responder so AP/STA differences in source
+                  // endpoint handling do not break the handshake.
+                  _targetAddress = dg.address;
+                  _targetPort = dg.port;
+                  if (!completer.isCompleted) completer.complete();
+                  return;
+                }
+
+                if (pkt.type == 'gps') {
+                  _gpsTelemetry = parseGpsTelemetry(pkt.data);
+                  continue;
+                }
+              }
+            } catch (error) {
+              debugPrint('UDP packet parse error: $error');
+            }
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          debugPrint('UDP socket error: $error');
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
+        },
+      );
+
+      final hello = jsonEncode({'type': 'hello'});
+      final helloPayload = utf8.encode(hello);
+
+      Timer? helloTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        if (!completer.isCompleted) {
+          for (final address in probeAddresses) {
+            socket.send(helloPayload, address, port);
+          }
+        }
+      });
+
+      for (final address in probeAddresses) {
+        socket.send(helloPayload, address, port);
+      }
+
+      try {
+        await completer.future.timeout(const Duration(seconds: 5));
+        _initialized = true;
+        _startHealthMonitor();
+      } finally {
+        helloTimer.cancel();
+      }
     } catch (e) {
       disconnect();
       rethrow;
     } finally {
-      helloTimer.cancel();
+      if (!_initialized && bound) {
+        unawaited(NetworkBindingService.clearBinding());
+      }
     }
   }
 
@@ -135,18 +163,12 @@ class UdpTransport implements ControlTransport {
     String? ssid,
     String? password,
   }) async {
-    if (!_initialized || _socket == null || _targetAddress == null || _targetPort == null) {
-      return;
-    }
-
-    final payload = jsonEncode({
+    _sendCommandPayload({
       'type': 'set_mode',
       'mode': controllerModeToPayload(mode),
-      if (ssid != null) 'ssid': ssid,
-      if (password != null) 'pass': password,
+      'ssid': ?ssid,
+      'pass': ?password,
     });
-
-    _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
   }
 
   @override
@@ -155,18 +177,12 @@ class UdpTransport implements ControlTransport {
     String? ssid,
     String? password,
   }) async {
-    if (!_initialized || _socket == null || _targetAddress == null || _targetPort == null) {
-      return;
-    }
-
-    final payload = jsonEncode({
+    _sendCommandPayload({
       'type': 'set_main_mode',
       'mode': controllerModeToPayload(mode),
-      if (ssid != null) 'ssid': ssid,
-      if (password != null) 'pass': password,
+      'ssid': ?ssid,
+      'pass': ?password,
     });
-
-    _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
   }
 
   void _startHealthMonitor() {
@@ -188,10 +204,7 @@ class UdpTransport implements ControlTransport {
 
   @override
   void send({required double tx, required double ty, required double sx, required double sy}) {
-    if (!_initialized ||
-        _socket == null ||
-        _targetAddress == null ||
-        _targetPort == null) {
+    if (!_hasSendEndpoint) {
       return;
     }
 
@@ -199,12 +212,35 @@ class UdpTransport implements ControlTransport {
     try {
       _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
     } on SocketException {
+      debugPrint('UDP send failed, disconnecting');
       disconnect();
     }
   }
 
-  // Public helper for tests to inspect the JSON payload sent over UDP.
-  static String buildSendPayload(double tx, double ty, double sx, double sy) {
-    return buildControlPayload(tx, ty, sx, sy);
+  String? _decodePacket(List<int> data) {
+    try {
+      return utf8.decode(data);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  bool _looksLikeJson(String raw) {
+    final trimmed = raw.trimLeft();
+    return trimmed.isNotEmpty && trimmed.codeUnitAt(0) == 0x7b;
+  }
+
+  void _sendCommandPayload(Map<String, Object?> payload) {
+    if (!_hasSendEndpoint) {
+      return;
+    }
+    _sendRawJson(jsonEncode(payload));
+  }
+
+  void _sendRawJson(String payload) {
+    if (!_hasSendEndpoint) {
+      return;
+    }
+    _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
   }
 }

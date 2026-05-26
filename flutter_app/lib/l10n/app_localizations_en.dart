@@ -117,6 +117,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leftJoystickVerticalAxis => 'Left joystick vertical axis';
 
   @override
+  String get showTelemetry => 'Show telemetry';
+
+  @override
+  String get showTelemetryDescription =>
+      'Show GPS telemetry on the control screen';
+
+  @override
   String get appearance => 'Appearance';
 
   @override
@@ -148,13 +155,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get organization => 'Organization';
-
-  @override
-  String get description => 'Description';
-
-  @override
-  String get appDescription =>
-      'Remote control application for ESP32-S3 based RC vehicles';
 
   @override
   String get translation => 'TRANSLATION';
@@ -240,4 +240,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moveBackwardRight => 'Move backward right';
+
+  @override
+  String get invalidIpAddress => 'Enter a valid IPv4 address';
+
+  @override
+  String get invalidPort => 'Enter a valid port (1-65535)';
 }

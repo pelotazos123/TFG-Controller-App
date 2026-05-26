@@ -11,8 +11,117 @@ static uint16_t controlEndpointPort = 0;
 static bool hasControlEndpoint = false;
 static unsigned long lastGpsSendMs = 0;
 static const unsigned long GPS_SEND_MS = 1000;
-static const bool LOG_CONTROL_PACKETS = false;
-static const bool LOG_UDP_EVENTS = false;
+
+static void updateControlEndpoint();
+
+namespace {
+const char* const HELLO_TYPE = "hello";
+const char* const HELLO_ACK_TYPE = "hello_ack";
+
+void logUdpRx(int packetSize) {
+  if (!LOG_TRANSPORT_ENDPOINTS) return;
+  Serial.printf(
+    "UDP RX %d bytes from %s:%u\n",
+    packetSize,
+    udp.remoteIP().toString().c_str(),
+    udp.remotePort()
+  );
+}
+
+void logUdpPayload(const char* label, const char* payload, size_t len) {
+  if (!LOG_TRANSPORT_MESSAGES) return;
+  Serial.printf("UDP %s: ", label);
+  Serial.write((const uint8_t*)payload, len);
+  Serial.println();
+}
+
+bool readPacketPayload(int packetSize, int& payloadLen) {
+  if (packetSize >= (int)sizeof(packetBuffer)) {
+    int discarded = udp.read(packetBuffer, sizeof(packetBuffer));
+    while (udp.available() > 0) {
+      discarded += udp.read(packetBuffer, sizeof(packetBuffer));
+    }
+    if (LOG_TRANSPORT_MESSAGES) {
+      Serial.printf(
+        "UDP packet too large: %d bytes (max %u)\n",
+        packetSize,
+        (unsigned int)(sizeof(packetBuffer) - 1)
+      );
+    }
+    payloadLen = 0;
+    return false;
+  }
+
+  payloadLen = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+  if (payloadLen <= 0) return false;
+  packetBuffer[payloadLen] = 0;
+  return true;
+}
+
+bool parseJsonPacket(StaticJsonDocument<JSON_RX_CAPACITY>& doc) {
+  const DeserializationError err = deserializeJson(doc, packetBuffer);
+  if (err == DeserializationError::Ok) {
+    return true;
+  }
+
+  if (LOG_TRANSPORT_MESSAGES) {
+    if (err == DeserializationError::NoMemory) {
+      Serial.println("UDP JSON demasiado grande");
+    } else {
+      Serial.printf("UDP JSON invalido: %s | raw: %s\n", err.c_str(), packetBuffer);
+    }
+  }
+  return false;
+}
+
+void sendHelloAck() {
+  StaticJsonDocument<64> ack;
+  ack["type"] = HELLO_ACK_TYPE;
+  char out[64];
+  const size_t outLen = serializeJson(ack, out, sizeof(out));
+  udp.beginPacket(udp.remoteIP(), udp.remotePort());
+  udp.write((uint8_t*)out, outLen);
+  udp.endPacket();
+
+  logUdpPayload("TX", out, outLen);
+}
+
+void onControlPacketApplied() {
+  if (currentMode == MODE_WIFI_AP) {
+    noteModeActivity(currentMode);
+  }
+
+  updateControlEndpoint();
+
+  if (LOG_CONTROL_PACKETS) {
+    Serial.printf("T(%.2f, %.2f) | S(%.2f, %.2f)\n", tx, ty, sx, sy);
+  }
+}
+
+bool handleParsedPacket(JsonDocument& doc) {
+  const char* msgType = doc["type"];
+  if (msgType && strcmp(msgType, HELLO_TYPE) == 0) {
+    updateControlEndpoint();
+    if (currentMode == MODE_WIFI_AP) {
+      noteModeActivity(currentMode);
+    }
+
+    sendHelloAck();
+    return true;
+  }
+
+  if (handleModeCommand(doc)) {
+    return true;
+  }
+
+  if (applyControlPacket(doc, lastPacketMs)) {
+    onControlPacketApplied();
+    return true;
+  }
+
+  return false;
+}
+}  // namespace
 
 void udpResetControlEndpoint() {
   controlEndpointIp = IPAddress();
@@ -50,88 +159,23 @@ static void sendGpsTelemetryIfDue() {
   udp.beginPacket(controlEndpointIp, controlEndpointPort);
   udp.write((uint8_t*)out, outLen);
   udp.endPacket();
+
+  logUdpPayload("TX", out, outLen);
 }
 
 void UDPtransport() {
   int packetSize = 0;
   while ((packetSize = udp.parsePacket()) > 0) {
-    if (LOG_UDP_EVENTS) {
-      Serial.printf(
-        "UDP RX %d bytes from %s:%u\n",
-        packetSize,
-        udp.remoteIP().toString().c_str(),
-        udp.remotePort()
-      );
-    }
+    logUdpRx(packetSize);
 
-    int len = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-    if (len <= 0) continue;
-    packetBuffer[len] = 0;
+    int payloadLen = 0;
+    if (!readPacketPayload(packetSize, payloadLen)) continue;
 
-    StaticJsonDocument<128> doc;
-    DeserializationError err = deserializeJson(doc, packetBuffer);
-    if (err == DeserializationError::Ok) {
-      const char* msgType = doc["type"];
-      if (msgType && String(msgType) == "hello") {
-        updateControlEndpoint();
-        if (currentMode == MODE_WIFI_AP) {
-          noteModeActivity(currentMode);
-        }
+    logUdpPayload("RX", packetBuffer, (size_t)payloadLen);
 
-        StaticJsonDocument<64> ack;
-        ack["type"] = "hello_ack";
-        char out[64];
-        size_t outLen = serializeJson(ack, out, sizeof(out));
-        udp.beginPacket(udp.remoteIP(), udp.remotePort());
-        udp.write((uint8_t*)out, outLen);
-        udp.endPacket();
-        if (LOG_UDP_EVENTS) {
-          Serial.printf(
-            "hello -> hello_ack hacia %s:%u\n",
-            udp.remoteIP().toString().c_str(),
-            udp.remotePort()
-          );
-        }
-        continue;
-      }
-
-      if (msgType && String(msgType) == "set_mode") {
-        const char* modeValue = doc["mode"];
-        const char* ssid = doc["ssid"];
-        const char* pass = doc["pass"];
-        requestModeChange(modeValue, ssid, pass);
-        continue;
-      }
-
-      if (msgType && String(msgType) == "set_main_mode") {
-        const char* modeValue = doc["mode"];
-        const char* ssid = doc["ssid"];
-        const char* pass = doc["pass"];
-        requestMainModeChange(modeValue, ssid, pass);
-        continue;
-      }
-
-      tx = doc["tx"] | 0.0;
-      ty = doc["ty"] | 0.0;
-      sx = doc["sx"] | 0.0;
-      sy = doc["sy"] | 0.0;
-      if (currentMode == MODE_WIFI_AP) {
-        noteModeActivity(currentMode);
-      }
-
-      updateControlEndpoint();
-
-      lastPacketMs = millis();
-
-      if (LOG_CONTROL_PACKETS) {
-        Serial.printf(
-          "T(%.2f, %.2f) | S(%.2f, %.2f)\n",
-          tx, ty, sx, sy
-        );
-      }
-    } else if (LOG_UDP_EVENTS) {
-      Serial.printf("UDP JSON invalido: %s | raw: %s\n", err.c_str(), packetBuffer);
-    }
+    StaticJsonDocument<JSON_RX_CAPACITY> doc;
+    if (!parseJsonPacket(doc)) continue;
+    handleParsedPacket(doc);
   }
 
   // Failsafe

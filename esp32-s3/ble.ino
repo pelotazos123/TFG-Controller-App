@@ -29,10 +29,16 @@ class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer*) override {
     deviceConnected = true;
     noteModeActivity(MODE_BLE);
+    if (LOG_TRANSPORT_ENDPOINTS) {
+      Serial.println("BLE client connected");
+    }
   }
   void onDisconnect(BLEServer* pServer) override {
     deviceConnected = false;
     lastBleDisconnectMs = millis();
+    if (LOG_TRANSPORT_ENDPOINTS) {
+      Serial.println("BLE client disconnected");
+    }
     delay(100);
     pServer->getAdvertising()->start();
   }
@@ -75,52 +81,36 @@ static void applyBleFailsafe() {
   }
 }
 
-static void handleBleControlPacket(JsonDocument& doc) {
-  tx = doc["tx"] | 0.0;
-  ty = doc["ty"] | 0.0;
-  sx = doc["sx"] | 0.0;
-  sy = doc["sy"] | 0.0;
-  lastBlePacketMs = millis();
-}
+static void processBlePayload(const String& payload) {
+  if (payload.length() == 0) return;
 
-static void processBlePayload(const uint8_t* data, size_t len) {
-  if (data == nullptr || len == 0) return;
+  if (LOG_TRANSPORT_MESSAGES) {
+    Serial.printf("BLE RX: %s\n", payload.c_str());
+  }
 
-  StaticJsonDocument<160> doc;
-  DeserializationError err = deserializeJson(doc, data, len);
+  StaticJsonDocument<JSON_RX_CAPACITY> doc;
+  DeserializationError err = deserializeJson(doc, payload);
   if (err != DeserializationError::Ok) {
+    if (LOG_TRANSPORT_MESSAGES) {
+      if (err == DeserializationError::NoMemory) {
+        Serial.println("BLE JSON demasiado grande");
+      } else {
+        Serial.printf("BLE JSON invalido: %s | raw: %s\n", err.c_str(), payload.c_str());
+      }
+    }
     return;
   }
 
   lastBleActivityMs = millis();
 
-  const char* msgType = doc["type"];
-  if (msgType && String(msgType) == "set_mode") {
-    const char* modeValue = doc["mode"];
-    const char* ssid = doc["ssid"];
-    const char* pass = doc["pass"];
-    requestModeChange(modeValue, ssid, pass);
-    return;
-  }
-
-  if (msgType && String(msgType) == "set_main_mode") {
-    const char* modeValue = doc["mode"];
-    const char* ssid = doc["ssid"];
-    const char* pass = doc["pass"];
-    requestMainModeChange(modeValue, ssid, pass);
-    return;
-  }
-
-  if (msgType == nullptr || String(msgType) == "control") {
-    handleBleControlPacket(doc);
-  }
+  if (handleModeCommand(doc)) return;
+  applyControlPacket(doc, lastBlePacketMs);
 }
 
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) override {
-    const uint8_t* data = pCharacteristic->getData();
-    size_t len = pCharacteristic->getLength();
-    processBlePayload(data, len);
+    String payload = pCharacteristic->getValue().c_str();
+    processBlePayload(payload);
   }
 };
 
@@ -203,6 +193,12 @@ static void sendBleGpsTelemetryIfDue() {
   pTxCharacteristic->setValue((uint8_t*)out, outLen);
   if (deviceConnected) {
     pTxCharacteristic->notify();
+  }
+
+  if (LOG_TRANSPORT_MESSAGES) {
+    Serial.print("BLE TX: ");
+    Serial.write((const uint8_t*)out, outLen);
+    Serial.println();
   }
 }
 

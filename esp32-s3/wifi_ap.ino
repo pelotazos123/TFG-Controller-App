@@ -2,10 +2,6 @@
 #include <ArduinoJson.h>
 #include "params.h"
 
-// ========= WIFI DEF =========
-const char* AP_SSID = "ESP32_RC";
-const char* AP_PASS = "123456789";
-
 void activateWIFI_AP() {
   if (currentMode == MODE_WIFI_AP) return;
 

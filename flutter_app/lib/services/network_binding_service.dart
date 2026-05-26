@@ -37,7 +37,7 @@ class NetworkBindingService {
     } on MissingPluginException {
       // Ignore in non-Android or test environments where channel is absent.
     } on PlatformException {
-      // Best effort cleanup; transport teardown should continue.
+      // Transport teardown should continue.
     }
   }
 

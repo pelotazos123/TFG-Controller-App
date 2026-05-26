@@ -31,6 +31,17 @@ static float cmdRearLeft = 0.0f;
 static float cmdRearRight = 0.0f;
 static unsigned long lastControlMs = 0;
 
+static void setL298Motor(
+	int in1,
+	int in2,
+	int pwmPin,
+	float speed,
+	float startCmd,
+	int minDuty
+);
+
+static float slewToward(float current, float target, float maxDelta);
+
 static float clamp(float v, float minV, float maxV) {
 	if (v > maxV) return maxV;
 	if (v < minV) return minV;
@@ -52,131 +63,111 @@ static float applyStartBoost(float v, float startCmd) {
 	return v;
 }
 
-static void setScaledTargets(
+
+static WheelTargets scaledTargets(
 	float baseFrontLeft,
 	float baseFrontRight,
 	float baseRearLeft,
 	float baseRearRight,
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
+	float power
 ) {
 	float scale = movementPower(power);
-	frontLeft = baseFrontLeft * scale;
-	frontRight = baseFrontRight * scale;
-	rearLeft = baseRearLeft * scale;
-	rearRight = baseRearRight * scale;
+	WheelTargets targets;
+	targets.frontLeft = baseFrontLeft * scale;
+	targets.frontRight = baseFrontRight * scale;
+	targets.rearLeft = baseRearLeft * scale;
+	targets.rearRight = baseRearRight * scale;
+	return targets;
 }
 
-static void moveStop(
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, frontLeft, frontRight, rearLeft, rearRight);
+static WheelTargets applyWheelPolarity(WheelTargets targets) {
+	targets.frontLeft *= DIR_FRONT_LEFT;
+	targets.frontRight *= DIR_FRONT_RIGHT;
+	targets.rearLeft *= DIR_REAR_LEFT;
+	targets.rearRight *= DIR_REAR_RIGHT;
+	return targets;
 }
 
-static void moveForward(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(1.0f, 1.0f, 1.0f, 1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static WheelTargets applyStartBoost(WheelTargets targets) {
+	targets.frontLeft = applyStartBoost(targets.frontLeft, START_CMD_ALL);
+	targets.frontRight = applyStartBoost(targets.frontRight, START_CMD_ALL);
+	targets.rearLeft = applyStartBoost(targets.rearLeft, START_CMD_ALL);
+	targets.rearRight = applyStartBoost(targets.rearRight, START_CMD_ALL);
+	return targets;
 }
 
-static void moveBackward(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(-1.0f, -1.0f, -1.0f, -1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static DirectionVector readInputVector() {
+	DirectionVector vector;
+	vector.strafe = tx * STRAFE_INPUT_SIGN;
+	vector.forward = sy * THROTTLE_INPUT_SIGN;
+	vector.rotate = sx;
+	return vector;
 }
 
-static void moveLeft(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(-1.0f, 1.0f, 1.0f, -1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static WheelTargets resolveDirectionToTargets(const DirectionVector& vector) {
+	const float absStrafe = fabs(vector.strafe);
+	const float absForward = fabs(vector.forward);
+	const float absRotate = fabs(vector.rotate);
+
+	if (absRotate >= absStrafe && absRotate >= absForward && absRotate > 0.0f) {
+		return (vector.rotate > 0.0f)
+			? scaledTargets(1.0f, -1.0f, 1.0f, -1.0f, absRotate)
+			: scaledTargets(-1.0f, 1.0f, -1.0f, 1.0f, absRotate);
+	}
+
+	if (absStrafe == 0.0f && absForward == 0.0f) {
+		return scaledTargets(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	if (absForward > 0.0f && absStrafe == 0.0f) {
+		return (vector.forward > 0.0f)
+			? scaledTargets(1.0f, 1.0f, 1.0f, 1.0f, absForward)
+			: scaledTargets(-1.0f, -1.0f, -1.0f, -1.0f, absForward);
+	}
+
+	if (absStrafe > 0.0f && absForward == 0.0f) {
+		return (vector.strafe > 0.0f)
+			? scaledTargets(1.0f, -1.0f, -1.0f, 1.0f, absStrafe)
+			: scaledTargets(-1.0f, 1.0f, 1.0f, -1.0f, absStrafe);
+	}
+
+	const float diagonalPower = fmax(absStrafe, absForward);
+	if (vector.forward > 0.0f && vector.strafe < 0.0f) {
+		return scaledTargets(0.0f, 1.0f, 1.0f, 0.0f, diagonalPower);
+	}
+	if (vector.forward > 0.0f && vector.strafe > 0.0f) {
+		return scaledTargets(1.0f, 0.0f, 0.0f, 1.0f, diagonalPower);
+	}
+	if (vector.forward < 0.0f && vector.strafe < 0.0f) {
+		return scaledTargets(-1.0f, 0.0f, 0.0f, -1.0f, diagonalPower);
+	}
+	if (vector.forward < 0.0f && vector.strafe > 0.0f) {
+		return scaledTargets(0.0f, -1.0f, -1.0f, 0.0f, diagonalPower);
+	}
+
+	return scaledTargets(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-static void moveRight(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(1.0f, -1.0f, -1.0f, 1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static float computeMaxSlewDelta(unsigned long nowMs) {
+	float dt = (float)(nowMs - lastControlMs) / 1000.0f;
+	lastControlMs = nowMs;
+	if (dt < 0.0f) dt = 0.0f;
+	if (dt > 0.10f) dt = 0.10f;
+	return MOTOR_SLEW_RATE_PER_SEC * dt;
 }
 
-static void moveForwardLeft(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(0.0f, 1.0f, 1.0f, 0.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static void applySlewToCurrentCommand(const WheelTargets& targets, float maxDelta) {
+	cmdFrontLeft = slewToward(cmdFrontLeft, targets.frontLeft, maxDelta);
+	cmdFrontRight = slewToward(cmdFrontRight, targets.frontRight, maxDelta);
+	cmdRearLeft = slewToward(cmdRearLeft, targets.rearLeft, maxDelta);
+	cmdRearRight = slewToward(cmdRearRight, targets.rearRight, maxDelta);
 }
 
-static void moveForwardRight(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(1.0f, 0.0f, 0.0f, 1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
-}
-
-static void moveBackwardLeft(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(-1.0f, 0.0f, 0.0f, -1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
-}
-
-static void moveBackwardRight(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(0.0f, -1.0f, -1.0f, 0.0f, power, frontLeft, frontRight, rearLeft, rearRight);
-}
-
-static void moveRotateLeft(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(-1.0f, 1.0f, -1.0f, 1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
-}
-
-static void moveRotateRight(
-	float power,
-	float &frontLeft,
-	float &frontRight,
-	float &rearLeft,
-	float &rearRight
-) {
-	setScaledTargets(1.0f, -1.0f, 1.0f, -1.0f, power, frontLeft, frontRight, rearLeft, rearRight);
+static void writeMotorOutputs() {
+	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, cmdFrontLeft, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, cmdFrontRight, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, cmdRearLeft, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, cmdRearRight, START_CMD_ALL, MIN_DUTY_ALL);
 }
 
 static float slewToward(float current, float target, float maxDelta) {
@@ -259,79 +250,12 @@ void controlSetup() {
 // Omnidirectional (mecanum/X-drive style) control:
 // tx = strafe, sy = forward/backward, sx = rotation
 void controlUpdate() {
-	float strafe = tx * STRAFE_INPUT_SIGN;
-	float forward = sy * THROTTLE_INPUT_SIGN;
-	float rotate = sx;
+	const DirectionVector direction = readInputVector();
+	WheelTargets targets = resolveDirectionToTargets(direction);
+	targets = applyWheelPolarity(targets);
+	targets = applyStartBoost(targets);
 
-	float frontLeft = 0.0f;
-	float frontRight = 0.0f;
-	float rearLeft = 0.0f;
-	float rearRight = 0.0f;
-
-	float absStrafe = fabs(strafe);
-	float absForward = fabs(forward);
-	float absRotate = fabs(rotate);
-
-	if (absRotate >= absStrafe && absRotate >= absForward && absRotate > 0.0f) {
-		if (rotate > 0.0f) {
-			moveRotateRight(absRotate, frontLeft, frontRight, rearLeft, rearRight);
-		} else {
-			moveRotateLeft(absRotate, frontLeft, frontRight, rearLeft, rearRight);
-		}
-	} else if (absStrafe == 0.0f && absForward == 0.0f) {
-		moveStop(frontLeft, frontRight, rearLeft, rearRight);
-	} else if (absForward > 0.0f && absStrafe == 0.0f) {
-		if (forward > 0.0f) {
-			moveForward(absForward, frontLeft, frontRight, rearLeft, rearRight);
-		} else {
-			moveBackward(absForward, frontLeft, frontRight, rearLeft, rearRight);
-		}
-	} else if (absStrafe > 0.0f && absForward == 0.0f) {
-		if (strafe > 0.0f) {
-			moveRight(absStrafe, frontLeft, frontRight, rearLeft, rearRight);
-		} else {
-			moveLeft(absStrafe, frontLeft, frontRight, rearLeft, rearRight);
-		}
-	} else {
-		float diagonalPower = fmax(absStrafe, absForward);
-		if (forward > 0.0f && strafe < 0.0f) {
-			moveForwardLeft(diagonalPower, frontLeft, frontRight, rearLeft, rearRight);
-		} else if (forward > 0.0f && strafe > 0.0f) {
-			moveForwardRight(diagonalPower, frontLeft, frontRight, rearLeft, rearRight);
-		} else if (forward < 0.0f && strafe < 0.0f) {
-			moveBackwardLeft(diagonalPower, frontLeft, frontRight, rearLeft, rearRight);
-		} else if (forward < 0.0f && strafe > 0.0f) {
-			moveBackwardRight(diagonalPower, frontLeft, frontRight, rearLeft, rearRight);
-		} else {
-			moveStop(frontLeft, frontRight, rearLeft, rearRight);
-		}
-	}
-
-	frontLeft *= DIR_FRONT_LEFT;
-	frontRight *= DIR_FRONT_RIGHT;
-	rearLeft *= DIR_REAR_LEFT;
-	rearRight *= DIR_REAR_RIGHT;
-
-	frontLeft = applyStartBoost(frontLeft, START_CMD_ALL);
-	frontRight = applyStartBoost(frontRight, START_CMD_ALL);
-	rearLeft = applyStartBoost(rearLeft, START_CMD_ALL);
-	rearRight = applyStartBoost(rearRight, START_CMD_ALL);
-
-	unsigned long now = millis();
-	float dt = (float)(now - lastControlMs) / 1000.0f;
-	lastControlMs = now;
-	if (dt < 0.0f) dt = 0.0f;
-	if (dt > 0.10f) dt = 0.10f;
-	float maxDelta = MOTOR_SLEW_RATE_PER_SEC * dt;
-
-	cmdFrontLeft = slewToward(cmdFrontLeft, frontLeft, maxDelta);
-	cmdFrontRight = slewToward(cmdFrontRight, frontRight, maxDelta);
-	cmdRearLeft = slewToward(cmdRearLeft, rearLeft, maxDelta);
-	cmdRearRight = slewToward(cmdRearRight, rearRight, maxDelta);
-
-
-	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, cmdFrontLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, cmdFrontRight, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, cmdRearLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, cmdRearRight, START_CMD_ALL, MIN_DUTY_ALL);
+	const float maxDelta = computeMaxSlewDelta(millis());
+	applySlewToCurrentCommand(targets, maxDelta);
+	writeMotorOutputs();
 }

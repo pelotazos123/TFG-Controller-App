@@ -17,6 +17,18 @@ enum MotionCommand {
   rotateRight,
 }
 
+class ControlOutput {
+  const ControlOutput({
+    required this.tx,
+    required this.sy,
+    required this.sx,
+  });
+
+  final double tx;
+  final double sy;
+  final double sx;
+}
+
 class ControlManager extends ChangeNotifier {
   ControlManager._();
 
@@ -26,11 +38,19 @@ class ControlManager extends ChangeNotifier {
   Timer? _sendTimer;
   bool _lastKnownConnected = false;
   int _lastSendMs = 0;
+  int _currentTickMs = 0;
+  bool _lastInputActive = false;
+  final Stopwatch _sendStopwatch = Stopwatch()..start();
+
+  static const int _activeSendIntervalMs = 33;
+  static const int _idleSendIntervalMs = 200;
+  static const double _inputEpsilon = 0.001;
 
   double _driveScale = 1.0;
 
   bool _reverseSteering = false;
   bool _reverseThrottle = false;
+  bool _showTelemetry = true;
 
   double _tx = 0.0;
   double _ty = 0.0;
@@ -47,6 +67,7 @@ class ControlManager extends ChangeNotifier {
   bool get reverseSteering => _reverseSteering;
   bool get reverseThrottle => _reverseThrottle;
   GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
+  bool get showTelemetry => _showTelemetry;
 
   void setDriveScale(double value) {
     final clamped = value.clamp(0.2, 1.0);
@@ -67,9 +88,23 @@ class ControlManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setShowTelemetry(bool value) {
+    if (_showTelemetry == value) return;
+    _showTelemetry = value;
+    notifyListeners();
+  }
+
   bool get isConnected => _transport?.isConnected == true;
 
   void setTransport(ControlTransport transport) {
+    final previous = _transport;
+    if (previous != null && previous != transport) {
+      previous.disconnect();
+    }
+    _stopTimer();
+    _lastSendMs = 0;
+    _lastInputActive = false;
+    _gpsTelemetry = null;
     _transport = transport;
     _lastKnownConnected = transport.isConnected;
     notifyListeners();
@@ -90,6 +125,7 @@ class ControlManager extends ChangeNotifier {
     _transport?.disconnect();
     _lastKnownConnected = false;
     _lastSendMs = 0;
+    _lastInputActive = false;
     _activeMotion = null;
     _gpsTelemetry = null;
     notifyListeners();
@@ -98,9 +134,10 @@ class ControlManager extends ChangeNotifier {
   void pauseSending() {
     _stopTimer();
     _lastSendMs = 0;
+    _lastInputActive = false;
   }
 
-  void sendJoystick(double tx, double ty, double sx, double sy) {
+  void sendJoystick(double tx, double ty, double sx) {
     _tx = tx;
     _ty = ty;
     _sx = sx;
@@ -119,19 +156,28 @@ class ControlManager extends ChangeNotifier {
     }
     _activeMotion = direction;
     _activeMotionPower = clampedPower;
+    _lastSendMs = 0;
     _transmitCurrentState();
   }
 
   void _startTimer() {
-    _stopTimer();
-    _sendTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      _transmitCurrentState();
-    });
+    _restartTimer(_idleSendIntervalMs);
   }
 
   void _stopTimer() {
     _sendTimer?.cancel();
     _sendTimer = null;
+    _currentTickMs = 0;
+  }
+
+  void _restartTimer(int intervalMs) {
+    if (_currentTickMs == intervalMs && _sendTimer != null) return;
+    _sendTimer?.cancel();
+    _currentTickMs = intervalMs;
+    _sendTimer = Timer.periodic(
+      Duration(milliseconds: intervalMs),
+      (_) => _transmitCurrentState(),
+    );
   }
 
   void _transmitCurrentState() {
@@ -152,90 +198,91 @@ class ControlManager extends ChangeNotifier {
       notifyListeners();
     }
 
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final output = _resolveCurrentOutput();
+    final isActiveInput = _isActiveInput(output);
+
     final minInterval = _minSendIntervalMs(current);
-    if (minInterval > 0 && nowMs - _lastSendMs < minInterval) {
+    final desiredInterval = isActiveInput
+      ? _activeSendIntervalMs
+      : _idleSendIntervalMs;
+    final effectiveInterval = minInterval > desiredInterval
+      ? minInterval
+      : desiredInterval;
+    _restartTimer(effectiveInterval);
+
+    final nowMs = _sendStopwatch.elapsedMilliseconds;
+    final forceSend = isActiveInput != _lastInputActive;
+    if (!forceSend && nowMs - _lastSendMs < effectiveInterval) {
+      _lastInputActive = isActiveInput;
+      _syncGpsTelemetry(current);
       return;
     }
     _lastSendMs = nowMs;
+    _lastInputActive = isActiveInput;
 
-    double outTx;
-    double outSy;
-    double outSx;
+    current.send(tx: output.tx, ty: 0.0, sx: output.sx, sy: output.sy);
+    _syncGpsTelemetry(current);
+  }
 
-    if (_activeMotion != null) {
-      final power = _activeMotionPower;
-      switch (_activeMotion!) {
-        case MotionCommand.forward:
-          outTx = 0.0;
-          outSy = power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.backward:
-          outTx = 0.0;
-          outSy = -power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.left:
-          outTx = -power;
-          outSy = 0.0;
-          outSx = 0.0;
-          break;
-        case MotionCommand.right:
-          outTx = power;
-          outSy = 0.0;
-          outSx = 0.0;
-          break;
-        case MotionCommand.forwardLeft:
-          outTx = -power;
-          outSy = power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.forwardRight:
-          outTx = power;
-          outSy = power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.backwardLeft:
-          outTx = -power;
-          outSy = -power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.backwardRight:
-          outTx = power;
-          outSy = -power;
-          outSx = 0.0;
-          break;
-        case MotionCommand.rotateLeft:
-          outTx = 0.0;
-          outSy = 0.0;
-          outSx = -power;
-          break;
-        case MotionCommand.rotateRight:
-          outTx = 0.0;
-          outSy = 0.0;
-          outSx = power;
-          break;
-      }
-    } else {
-      // Omnidirectional mapping:
-      // left joystick -> tx (strafe), sy (forward/backward)
-      // right joystick X -> sx (rotation)
-      outTx = _tx;
-      outSy = _ty;
-      outSx = _sx;
+  ControlOutput _resolveCurrentOutput() {
+    final ControlOutput baseOutput = _activeMotion != null
+      ? _resolveMotionCommandOutput(_activeMotion!, _activeMotionPower)
+      : ControlOutput(tx: _tx, sy: _ty, sx: _sx);
+
+    final withDirectionPreferences = _applyDirectionPreferences(baseOutput);
+    return _applyDriveScale(withDirectionPreferences);
+  }
+
+  ControlOutput _resolveMotionCommandOutput(MotionCommand command, double power) {
+    switch (command) {
+      case MotionCommand.forward:
+        return ControlOutput(tx: 0.0, sy: power, sx: 0.0);
+      case MotionCommand.backward:
+        return ControlOutput(tx: 0.0, sy: -power, sx: 0.0);
+      case MotionCommand.left:
+        return ControlOutput(tx: -power, sy: 0.0, sx: 0.0);
+      case MotionCommand.right:
+        return ControlOutput(tx: power, sy: 0.0, sx: 0.0);
+      case MotionCommand.forwardLeft:
+        return ControlOutput(tx: -power, sy: power, sx: 0.0);
+      case MotionCommand.forwardRight:
+        return ControlOutput(tx: power, sy: power, sx: 0.0);
+      case MotionCommand.backwardLeft:
+        return ControlOutput(tx: -power, sy: -power, sx: 0.0);
+      case MotionCommand.backwardRight:
+        return ControlOutput(tx: power, sy: -power, sx: 0.0);
+      case MotionCommand.rotateLeft:
+        return ControlOutput(tx: 0.0, sy: 0.0, sx: -power);
+      case MotionCommand.rotateRight:
+        return ControlOutput(tx: 0.0, sy: 0.0, sx: power);
     }
+  }
 
-    if (_reverseSteering) outTx = -outTx;
-    if (_reverseThrottle) outSy = -outSy;
+  ControlOutput _applyDirectionPreferences(ControlOutput output) {
+    return ControlOutput(
+      tx: _reverseSteering ? -output.tx : output.tx,
+      sy: _reverseThrottle ? -output.sy : output.sy,
+      sx: output.sx,
+    );
+  }
 
-    outTx = (outTx * _driveScale).clamp(-1.0, 1.0).toDouble();
-    outSy = (outSy * _driveScale).clamp(-1.0, 1.0).toDouble();
-    outSx = (outSx * _driveScale).clamp(-1.0, 1.0).toDouble();
+  ControlOutput _applyDriveScale(ControlOutput output) {
+    return ControlOutput(
+      tx: (output.tx * _driveScale).clamp(-1.0, 1.0).toDouble(),
+      sy: (output.sy * _driveScale).clamp(-1.0, 1.0).toDouble(),
+      sx: (output.sx * _driveScale).clamp(-1.0, 1.0).toDouble(),
+    );
+  }
 
-    current.send(tx: outTx, ty: 0.0, sx: outSx, sy: outSy);
+  bool _isActiveInput(ControlOutput output) {
+    return _activeMotion != null ||
+      output.tx.abs() > _inputEpsilon ||
+      output.sy.abs() > _inputEpsilon ||
+      output.sx.abs() > _inputEpsilon;
+  }
 
-    final latestGps = current.gpsTelemetry;
+  void _syncGpsTelemetry(ControlTransport transport) {
+    final latestGps = transport.gpsTelemetry;
     if (latestGps != _gpsTelemetry) {
       _gpsTelemetry = latestGps;
       notifyListeners();
@@ -253,6 +300,7 @@ class ControlManager extends ChangeNotifier {
     _stopTimer();
     if (_lastKnownConnected) {
       _lastKnownConnected = false;
+      _lastInputActive = false;
       notifyListeners();
     }
   }

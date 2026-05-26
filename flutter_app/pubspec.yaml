@@ -57,6 +57,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_launcher_icons: ^0.14.4
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -78,7 +80,25 @@ flutter:
   uses-material-design: true
 
   assets:
-    - web/icons/Icon-192.png
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: false
+  adaptive_icon_foreground: assets/icons/final-logo-android-foreground.png
+  adaptive_icon_background: '#ffffff'
+  web:
+    generate: true
+    image_path: assets/icons/final-logo-amplified.png
+  windows:
+    generate: true
+    image_path: assets/icons/final-logo-amplified.png
+  macos:
+    generate: true
+    image_path: assets/icons/final-logo-amplified.png
+  image_path: assets/icons/final-logo-amplified.png
+  min_sdk_android: 21
 
   # To add assets to your application, add an assets section, like this:
   # assets:

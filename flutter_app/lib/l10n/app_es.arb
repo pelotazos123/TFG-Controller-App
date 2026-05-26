@@ -35,6 +35,8 @@
   "leftJoystickHorizontalAxis": "Eje horizontal del joystick izquierdo",
   "reverseForwardBackY": "Invertir avance/retroceso (Y)",
   "leftJoystickVerticalAxis": "Eje vertical del joystick izquierdo",
+  "showTelemetry": "Mostrar telemetria",
+  "showTelemetryDescription": "Mostrar telemetria GPS en la pantalla de control",
   "appearance": "Apariencia",
   "theme": "Tema",
   "system": "Sistema",
@@ -46,8 +48,6 @@
   "hardware": "Hardware",
   "developer": "Desarrollador",
   "organization": "Organización",
-  "description": "Descripción",
-  "appDescription": "Aplicación de control remoto para vehículos RC basados en ESP32-S3",
   "translation": "TRASLACIÓN",
   "rotation": "ROTACIÓN",
   "movementMatrix": "MATRIZ DE MOVIMIENTO",
@@ -75,5 +75,7 @@
   "moveForwardLeft": "Avanzar a la izquierda",
   "moveBackwardLeft": "Retroceder a la izquierda",
   "moveForwardRight": "Avanzar a la derecha",
-  "moveBackwardRight": "Retroceder a la derecha"
+  "moveBackwardRight": "Retroceder a la derecha",
+  "invalidIpAddress": "Introduce una direccion IPv4 valida",
+  "invalidPort": "Introduce un puerto valido (1-65535)"
 }

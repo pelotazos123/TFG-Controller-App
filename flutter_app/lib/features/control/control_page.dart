@@ -10,7 +10,7 @@ import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 
 import '../../locale_provider.dart';
 import '../../theme_provider.dart';
-import '../settings/settings.dart';
+import '../settings/settings_page.dart';
 
 class ControlPage extends StatefulWidget {
   final ThemeProvider? themeProvider;
@@ -25,6 +25,8 @@ class ControlPage extends StatefulWidget {
 class _ControlPageState extends State<ControlPage> {
   static const double _responseGamma = 1.35;
   static const double _motionCommandPower = 1.0;
+  static const double _translationDeadzone = 0.08;
+  static const double _translationAxisSnap = 0.12;
 
   static const _allOrientations = [
     DeviceOrientation.portraitUp,
@@ -72,8 +74,9 @@ class _ControlPageState extends State<ControlPage> {
   @override
   void dispose() {
     SystemChrome.setPreferredOrientations(_allOrientations);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _controlManager.setMotionCommand(null);
-    _controlManager.sendJoystick(0, 0, 0, 0);
+    _controlManager.sendJoystick(0, 0, 0);
     super.dispose();
   }
 
@@ -221,6 +224,7 @@ class _ControlPageState extends State<ControlPage> {
         final isConnected = _controlManager.isConnected;
         final transport = _controlManager.transport;
         final gps = _controlManager.gpsTelemetry;
+        final showTelemetry = _controlManager.showTelemetry;
         final rotationTooltip = _isLandscapeLocked
           ? (localizations?.unlockRotation ?? 'Unlock rotation')
           : (localizations?.lockRotation ?? 'Lock rotation');
@@ -236,9 +240,11 @@ class _ControlPageState extends State<ControlPage> {
           _ => Icons.link_off,
         };
 
-        final gpsColor = gps == null
+        final gpsColor = showTelemetry
+          ? (gps == null
             ? textColor.withValues(alpha: 0.8)
-            : (gps.valid ? connectedColor : disconnectedColor);
+            : (gps.valid ? connectedColor : disconnectedColor))
+          : textColor;
 
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -328,24 +334,26 @@ class _ControlPageState extends State<ControlPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              if (isConnected && gps != null)
-                _buildGpsTelemetryCard(
-                  gps: gps,
-                  localizations: localizations,
-                  connectedColor: connectedColor,
-                  disconnectedColor: disconnectedColor,
-                  isLandscape: isLandscape,
-                )
-              else
-                Text(
-                  _gpsLabel(gps, isConnected: isConnected),
-                  style: TextStyle(
-                    color: gpsColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+              if (showTelemetry) ...[
+                const SizedBox(height: 4),
+                if (isConnected && gps != null)
+                  _buildGpsTelemetryCard(
+                    gps: gps,
+                    localizations: localizations,
+                    connectedColor: connectedColor,
+                    disconnectedColor: disconnectedColor,
+                    isLandscape: isLandscape,
+                  )
+                else
+                  Text(
+                    _gpsLabel(gps, isConnected: isConnected),
+                    style: TextStyle(
+                      color: gpsColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+              ],
             ],
           ),
         );
@@ -694,6 +702,7 @@ class _ControlPageState extends State<ControlPage> {
               onChanged: onChanged,
             ),
             onPanEnd: (_) => onChanged(Offset.zero),
+            onPanCancel: () => onChanged(Offset.zero),
             child: Container(
               width: joystickSize,
               height: joystickSize,
@@ -768,13 +777,28 @@ class _ControlPageState extends State<ControlPage> {
   }
 
   void _sendCurrentControl() {
-    final forwardAxis = -_leftJoystick.dy;
+    final translated = _applyTranslationAssist(_leftJoystick);
+    final forwardAxis = -translated.dy;
     _controlManager.sendJoystick(
-      _leftJoystick.dx,
+      translated.dx,
       forwardAxis,
       _rightJoystick.dx,
-      0,
     );
+  }
+
+  Offset _applyTranslationAssist(Offset input) {
+    if (input.distance < _translationDeadzone) {
+      return Offset.zero;
+    }
+
+    var adjusted = input;
+    if (adjusted.dx.abs() < _translationAxisSnap) {
+      adjusted = Offset(0.0, adjusted.dy);
+    }
+    if (adjusted.dy.abs() < _translationAxisSnap) {
+      adjusted = Offset(adjusted.dx, 0.0);
+    }
+    return adjusted;
   }
 
   void _setMotionCommand(MotionCommand direction) {

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
-import 'package:flutter_rccontroller_app/transport/transport_codec.dart';
+import 'package:flutter_rccontroller_app/transport/transport_message.dart';
 
 class BleTransport implements ControlTransport {
   static const String deviceName = 'ESP32-BLE';
@@ -19,6 +20,8 @@ class BleTransport implements ControlTransport {
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
   bool _connected = false;
   GpsTelemetry? _gpsTelemetry;
+
+  bool get _canSend => _connected && _rxChar != null;
 
   @override
   bool get isConnected => _connected;
@@ -87,7 +90,8 @@ class BleTransport implements ControlTransport {
       } catch (_) {
         // Ignore priority failures on unsupported platforms.
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('BLE connect failed: $error');
       disconnect();
       rethrow;
     }
@@ -121,7 +125,8 @@ class BleTransport implements ControlTransport {
       await Future.delayed(const Duration(milliseconds: 200));
       _notifySub = _txChar!.lastValueStream.listen(_handleNotification);
       _connected = true;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('BLE init failed: $error');
       disconnect();
       rethrow;
     }
@@ -130,14 +135,18 @@ class BleTransport implements ControlTransport {
   void _handleNotification(List<int> data) {
     if (data.isEmpty) return;
 
-    final raw = utf8.decode(data, allowMalformed: true);
+    if (data.length > maxInboundPacketBytes) return;
+
+    final raw = _decodePacket(data);
+    if (raw == null || !_looksLikeJson(raw)) return;
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map && decoded['type'] == 'gps') {
-        _gpsTelemetry = parseGpsTelemetry(decoded);
+      final pkt = parseIncomingPacket(decoded);
+      if (pkt != null && pkt.type == 'gps') {
+        _gpsTelemetry = parseGpsTelemetry(pkt.data);
       }
-    } catch (_) {
-      // Ignore malformed packets.
+    } catch (error) {
+      debugPrint('BLE packet parse error: $error');
     }
   }
 
@@ -166,10 +175,9 @@ class BleTransport implements ControlTransport {
     required double sx,
     required double sy,
   }) {
-    if (!_connected || _rxChar == null) return;
-
-    final payload = buildSendPayload(tx, ty, sx, sy);
-    unawaited(_rxChar!.write(utf8.encode(payload), withoutResponse: true).catchError((_) {}));
+    if (!_canSend) return;
+    final payload = buildControlPayload(tx, ty, sx, sy);
+    _writePayload(payload, withoutResponse: true, errorContext: 'send');
   }
 
   @override
@@ -178,20 +186,20 @@ class BleTransport implements ControlTransport {
     String? ssid,
     String? password,
   }) async {
-    if (!_connected || _rxChar == null) return;
+    if (!_canSend) return;
 
     final payload = jsonEncode({
       'type': 'set_mode',
       'mode': controllerModeToPayload(mode),
-      if (ssid != null) 'ssid': ssid,
-      if (password != null) 'pass': password,
+      'ssid': ?ssid,
+      'pass': ?password,
     });
 
-    try {
-      await _rxChar!.write(utf8.encode(payload), withoutResponse: false);
-    } catch (_) {
-      // Ignore BLE write failures during disconnects.
-    }
+    await _writePayloadAwaited(
+      payload,
+      withoutResponse: false,
+      errorContext: 'mode command',
+    );
   }
 
   @override
@@ -200,23 +208,58 @@ class BleTransport implements ControlTransport {
     String? ssid,
     String? password,
   }) async {
-    if (!_connected || _rxChar == null) return;
+    if (!_canSend) return;
 
     final payload = jsonEncode({
       'type': 'set_main_mode',
       'mode': controllerModeToPayload(mode),
-      if (ssid != null) 'ssid': ssid,
-      if (password != null) 'pass': password,
+      'ssid': ?ssid,
+      'pass': ?password,
     });
 
+    await _writePayloadAwaited(
+      payload,
+      withoutResponse: false,
+      errorContext: 'main mode command',
+    );
+  }
+
+  void _writePayload(
+    String payload, {
+    required bool withoutResponse,
+    required String errorContext,
+  }) {
+    if (!_canSend) return;
+    unawaited(
+      _rxChar!
+          .write(utf8.encode(payload), withoutResponse: withoutResponse)
+          .catchError((error) => debugPrint('BLE $errorContext failed: $error')),
+    );
+  }
+
+  Future<void> _writePayloadAwaited(
+    String payload, {
+    required bool withoutResponse,
+    required String errorContext,
+  }) async {
+    if (!_canSend) return;
     try {
-      await _rxChar!.write(utf8.encode(payload), withoutResponse: false);
-    } catch (_) {
-      // Ignore BLE write failures during disconnects.
+      await _rxChar!.write(utf8.encode(payload), withoutResponse: withoutResponse);
+    } catch (error) {
+      debugPrint('BLE $errorContext failed: $error');
     }
   }
 
-  static String buildSendPayload(double tx, double ty, double sx, double sy) {
-    return buildControlPayload(tx, ty, sx, sy);
+  String? _decodePacket(List<int> data) {
+    try {
+      return utf8.decode(data);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  bool _looksLikeJson(String raw) {
+    final trimmed = raw.trimLeft();
+    return trimmed.isNotEmpty && trimmed.codeUnitAt(0) == 0x7b;
   }
 }
