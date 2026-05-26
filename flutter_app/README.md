@@ -69,8 +69,6 @@ The firmware and ESP32-related sources live in the repository at `../esp32-s3` r
 - Select the appropriate board (ESP32-S3) and the correct serial/port.
 - Build and upload to the device. The firmware implements the BLE, UDP and transport logic the app communicates with.
 
-If you prefer command-line flashing, use the tooling you normally use for ESP32 uploads (PlatformIO or `esptool.py`), and consult `esp32-s3/README.md` or the individual `.ino` files for build details.
-
 ## Project structure
 
 - `lib/` — main Flutter application code
@@ -81,7 +79,7 @@ If you prefer command-line flashing, use the tooling you normally use for ESP32 
 - `assets/` — images and icons used by the app
 - `test/` — unit and widget tests
 - `integration_test/` — end-to-end tests
-- `ios/`, `android/`, `macos/`, `linux/`, `windows/`, `web/` — platform projects
+- `ios/`, `android/`, `windows/` — platform projects
 
 ## Testing
 
@@ -96,22 +94,4 @@ Run integration tests (requires a running device/emulator):
 ```bash
 flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_flow_test.dart
 ```
-
-## Contributing
-
-- Raise issues for bugs or feature requests.
-- Send pull requests against the `develop` branch and include a brief description of your changes.
-
-If you want help setting up the ESP32 toolchain or running the integration tests locally, open an issue and include your OS and toolchain details.
-
-## License
-
-This repository does not include a license file. If you want to apply an open-source license, add one at the repository root (for example, `LICENSE` with MIT or Apache 2.0).
-
----
-
-If you want, I can also:
-
-- add a more detailed `esp32-s3/README.md` with flashing steps, or
-- update the repository root `README.md` to describe both the app and firmware together.
 
