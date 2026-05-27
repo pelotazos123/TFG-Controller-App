@@ -13,6 +13,8 @@ class SettingsManager extends ChangeNotifier {
   static const String mainModeKey = 'main_mode';
   static const String bluetoothReminderKey = 'bluetooth_reminder_skip';
   static const String showTelemetryKey = 'show_telemetry';
+  static const String driveWheelsKey = 'drive_wheels'; // '2' or '4'
+  static const String mecanumKey = 'mecanum_wheels';
 
   Future<ControllerMode> loadMainMode(ControllerMode fallback) async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,6 +46,30 @@ class SettingsManager extends ChangeNotifier {
   Future<void> persistTelemetryPreference(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(showTelemetryKey, value);
+  }
+
+  Future<int> loadDriveWheelsMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(driveWheelsKey);
+    if (raw == null) return 4;
+    final val = int.tryParse(raw);
+    if (val == 2) return 2;
+    return 4;
+  }
+
+  Future<void> persistDriveWheelsMode(int wheels) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(driveWheelsKey, wheels.toString());
+  }
+
+  Future<bool> loadMecanumPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(mecanumKey) ?? false;
+  }
+
+  Future<void> persistMecanumPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(mecanumKey, value);
   }
 
   String _modeToPrefs(ControllerMode mode) => controllerModeToPayload(mode);

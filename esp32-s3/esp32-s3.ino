@@ -1,8 +1,3 @@
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
-
 #include <Arduino.h>
 #include "params.h"
 #include "esp_system.h"
@@ -60,19 +55,14 @@ static void setupModeButton() {
   Serial.printf("Mode button on GPIO %d (INPUT_PULLUP)\n", PIN_BUTTON);
 }
 
-static void toggleControllerMode() {
+static void toggleMainMode() {
   modeChangePending = false;
   pendingMode = MODE_NONE;
 
-  if (currentMode == MODE_BLE_CONTROLLER) {
-    Serial.println("Button: return to main mode");
-    stopBLEController();
-    activateMainMode();
-    return;
-  }
-
-  Serial.println("Button: switch to BLE controller mode");
-  activateBLEController();
+  Mode nextMode = (mainMode == MODE_WIFI_AP) ? MODE_BLE : MODE_WIFI_AP;
+  Serial.println("Button: toggle main mode");
+  saveMainMode(nextMode);
+  activateMainMode();
 }
 
 static void handleModeButton() {
@@ -92,7 +82,7 @@ static void handleModeButton() {
 
   if (stableButtonState == LOW && !buttonLatched) {
     buttonLatched = true;
-    toggleControllerMode();
+    toggleMainMode();
   } else if (stableButtonState == HIGH && buttonLatched) {
     buttonLatched = false;
   }
@@ -138,8 +128,6 @@ void loop() {
     UDPtransport();
   } else if (currentMode == MODE_BLE) {
     BLEtransport();
-  } else if (currentMode == MODE_BLE_CONTROLLER) {
-    BLEControllerTransport();
   } else {
     tx = ty = sx = sy = 0.0f;
   }

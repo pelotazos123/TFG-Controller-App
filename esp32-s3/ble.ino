@@ -205,7 +205,6 @@ static void sendBleGpsTelemetryIfDue() {
 void activateBLE() {
   if (currentMode == MODE_BLE) return;
 
-  stopBLEController();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   udp.stop();

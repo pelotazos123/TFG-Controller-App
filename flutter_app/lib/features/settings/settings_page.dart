@@ -43,6 +43,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _reverseSteering = false;
   bool _skipBluetoothReminder = false;
   bool _showTelemetry = true;
+  int _driveWheels = 4;
+  bool _mecanumWheels = false;
 
   bool _isConnecting = false;
 
@@ -85,6 +87,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadMainMode();
     _loadBluetoothReminderPreference();
     _loadTelemetryPreference();
+    _loadDriveWheelsPreference();
+    _loadMecanumPreference();
 
     final active = _resolveActiveMode(_controlManager.transport);
     if (active != null) {
@@ -128,6 +132,26 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     setState(() => _showTelemetry = show);
     _controlManager.setShowTelemetry(show);
+  }
+
+  Future<void> _loadDriveWheelsPreference() async {
+    final wheels = await _settingsManager.loadDriveWheelsMode();
+    if (!mounted) return;
+    setState(() => _driveWheels = wheels);
+  }
+
+  Future<void> _persistDriveWheelsPreference(int wheels) async {
+    await _settingsManager.persistDriveWheelsMode(wheels);
+  }
+
+  Future<void> _loadMecanumPreference() async {
+    final mech = await _settingsManager.loadMecanumPreference();
+    if (!mounted) return;
+    setState(() => _mecanumWheels = mech);
+  }
+
+  Future<void> _persistMecanumPreference(bool value) async {
+    await _settingsManager.persistMecanumPreference(value);
   }
 
   Future<void> _persistTelemetryPreference(bool value) async {
@@ -738,6 +762,35 @@ class _SettingsPageState extends State<SettingsPage> {
             await _persistTelemetryPreference(value);
           },
         ),
+        const SizedBox(height: 8),
+        ListTile(
+          title: Text(localizations?.driveWheels ?? 'Drive wheels'),
+          subtitle: Text(_driveWheels == 4
+              ? (localizations?.fourWheels ?? '4 wheels')
+              : (localizations?.twoWheels ?? '2 wheels')),
+          trailing: DropdownButton<int>(
+            value: _driveWheels,
+            items: [
+              DropdownMenuItem(value: 4, child: Text(localizations?.fourWheels ?? '4 wheels')),
+              DropdownMenuItem(value: 2, child: Text(localizations?.twoWheels ?? '2 wheels')),
+            ],
+            onChanged: (value) async {
+              if (value == null) return;
+              setState(() => _driveWheels = value);
+              await _persistDriveWheelsPreference(value);
+            },
+          ),
+        ),
+        if (_driveWheels == 4) ...[
+          CheckboxListTile(
+            title: Text(localizations?.useMecanumWheels ?? 'Use mecanum wheels'),
+            value: _mecanumWheels,
+            onChanged: (value) async {
+              setState(() => _mecanumWheels = value == true);
+              await _persistMecanumPreference(_mecanumWheels);
+            },
+          ),
+        ],
       ],
     );
   }

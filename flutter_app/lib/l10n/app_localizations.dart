@@ -416,6 +416,30 @@ abstract class AppLocalizations {
   /// **'Show movement matrix'**
   String get showMovementMatrix;
 
+  /// No description provided for @driveWheels.
+  ///
+  /// In en, this message translates to:
+  /// **'Drive wheels'**
+  String get driveWheels;
+
+  /// No description provided for @twoWheels.
+  ///
+  /// In en, this message translates to:
+  /// **'2 wheels'**
+  String get twoWheels;
+
+  /// No description provided for @fourWheels.
+  ///
+  /// In en, this message translates to:
+  /// **'4 wheels'**
+  String get fourWheels;
+
+  /// No description provided for @useMecanumWheels.
+  ///
+  /// In en, this message translates to:
+  /// **'Use mecanum wheels'**
+  String get useMecanumWheels;
+
   /// No description provided for @gpsWaiting.
   ///
   /// In en, this message translates to:

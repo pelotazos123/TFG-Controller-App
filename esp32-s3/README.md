@@ -42,8 +42,7 @@ Rear driver (L298N #2):
 
 ### 1.4 Mode button (physical toggle)
 - GPIO41 configured as INPUT_PULLUP
-- Short press toggles between BLE controller mode and the main mode
-- If the controller is not found within 50 seconds, firmware returns to main mode
+- Short press toggles the saved main mode between WiFi AP and BLE
 
 ## 2) Software requirements
 
@@ -67,18 +66,13 @@ In esp32-s3.ino, choose one startup mode in setup():
 
 Current default is AP mode.
 
-### 3.2 BLE controller settings
-In params.h:
-- BLE_CONTROLLER_NAME: update to the advertised name of your controller
-- BLE_CONTROLLER_CONNECT_TIMEOUT_MS: controller timeout before fallback
-
-### 3.3 AP mode defaults
+### 3.2 AP mode defaults
 Defined in wifi_ap.ino:
 - SSID: ESP32_RC
 - Password: 123456789
 - UDP port: 4210
 
-### 3.4 BLE mode
+### 3.3 BLE mode
 - Device name: ESP32-BLE
 - Service UUID: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
 - RX characteristic: 6E400002-B5A3-F393-E0A9-E50E24DCCA9E

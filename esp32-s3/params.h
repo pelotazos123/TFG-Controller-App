@@ -1,11 +1,6 @@
  #ifndef PARAMS_H
 #define PARAMS_H
 
-#include "BLEDevice.h"
-#include "BLEServer.h"
-#include "BLEUtils.h"
-#include "BLE2902.h"
-
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
@@ -35,17 +30,10 @@ const int REAR_ENB = 35;   // PWM for rear-right
 
 
 // ========= GPS (NEO-6M) =========
-const int GPS_RX_PIN = 1;
-const int GPS_TX_PIN = 2;
+const int GPS_RX_PIN = 42;
+const int GPS_TX_PIN = 41;
 const uint32_t GPS_BAUD = 9600;
 
-// ========= Mode button =========
-const int PIN_BUTTON = 41;
-const unsigned long MODE_BUTTON_DEBOUNCE_MS = 40;
-
-// ========= BLE controller (HID host) =========
-const char* BLE_CONTROLLER_NAME = "Wireless Controller";
-const unsigned long BLE_CONTROLLER_CONNECT_TIMEOUT_MS = 50000;
 
 // ========= Wi-Fi AP =========
 const char AP_SSID[] = "ESP32_RC";
@@ -78,6 +66,7 @@ constexpr size_t JSON_RX_CAPACITY =
 const bool LOG_TRANSPORT_MESSAGES = true;
 const bool LOG_TRANSPORT_ENDPOINTS = true;
 const bool LOG_CONTROL_PACKETS = false;
+const bool LOG_GPS_TRACES = true;
 
 // ========= Timing =========
 extern const unsigned long TIMEOUT_MS = 200;
@@ -93,8 +82,7 @@ extern float sy;
 enum Mode {
   MODE_NONE,
   MODE_WIFI_AP,
-  MODE_BLE,
-  MODE_BLE_CONTROLLER
+  MODE_BLE
 };
 
 struct WheelTargets {
@@ -122,8 +110,6 @@ void applyPendingModeChange();
 void activateWIFI_AP();
 void activateBLE();
 void stopBLE();
-void activateBLEController();
-void stopBLEController();
 void activateMainMode();
 void activateFallbackMode();
 void requestModeChange(const char* modeValue, const char* ssid, const char* pass);
@@ -140,7 +126,6 @@ void saveMainMode(Mode mode);
 // ========= Transports =========
 void UDPtransport();
 void BLEtransport();
-void BLEControllerTransport();
 
 // ========= Transport JSON =========
 bool handleModeCommand(JsonDocument& doc);

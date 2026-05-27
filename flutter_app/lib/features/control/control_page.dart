@@ -11,6 +11,7 @@ import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 import '../../locale_provider.dart';
 import '../../theme_provider.dart';
 import '../settings/settings_page.dart';
+import '../settings/settings_manager.dart';
 
 class ControlPage extends StatefulWidget {
   final ThemeProvider? themeProvider;
@@ -49,14 +50,22 @@ class _ControlPageState extends State<ControlPage> {
 
   final ControlManager _controlManager = ControlManager.instance;
 
+  final SettingsManager _settingsManager = SettingsManager();
+  int _driveWheels = 4;
+  bool _mecanumWheels = false;
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setPreferredOrientations(_allOrientations);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _loadDriveSettings();
   }
 
   void _toggleMovementMatrix() {
+    if (!(_driveWheels == 4 && _mecanumWheels)) {
+      return;
+    }
     final shouldShow = !_showMovementMatrix;
     setState(() {
       _showMovementMatrix = shouldShow;
@@ -113,7 +122,8 @@ class _ControlPageState extends State<ControlPage> {
                                   horizontalOnly: false,
                                   onChanged: (v) {
                                     _clearMotionCommand();
-                                    setState(() => _leftJoystick = v);
+                                    final adjusted = _driveWheels == 2 ? Offset(0.0, v.dy) : v;
+                                    setState(() => _leftJoystick = adjusted);
                                     _sendCurrentControl();
                                   },
                                   joystickSize: joystickSize,
@@ -121,7 +131,7 @@ class _ControlPageState extends State<ControlPage> {
                                   translateFactor: translateFactor,
                                 ),
                               ),
-                              if (_showMovementMatrix) ...[
+                              if (_showMovementMatrix && _driveWheels == 4 && _mecanumWheels) ...[
                                 const SizedBox(width: 10),
                                 ConstrainedBox(
                                   constraints: const BoxConstraints(
@@ -163,7 +173,8 @@ class _ControlPageState extends State<ControlPage> {
                                         horizontalOnly: false,
                                         onChanged: (v) {
                                           _clearMotionCommand();
-                                          setState(() => _leftJoystick = v);
+                                          final adjusted = _driveWheels == 2 ? Offset(0.0, v.dy) : v;
+                                          setState(() => _leftJoystick = adjusted);
                                           _sendCurrentControl();
                                         },
                                         joystickSize: joystickSize,
@@ -194,7 +205,7 @@ class _ControlPageState extends State<ControlPage> {
                                   ],
                                 ),
                               ),
-                              if (_showMovementMatrix) ...[
+                              if (_showMovementMatrix && _driveWheels == 4 && _mecanumWheels) ...[
                                 _buildMotionPad(isLandscape: false),
                                 const SizedBox(height: 12),
                               ],
@@ -301,25 +312,26 @@ class _ControlPageState extends State<ControlPage> {
                           });
                         },
                       ),
-                      IconButton(
-                        tooltip: _showMovementMatrix
-                          ? (localizations?.hideMovementMatrix ??
-                            'Hide movement matrix')
-                          : (localizations?.showMovementMatrix ??
-                            'Show movement matrix'),
-                        icon: Icon(
-                          _showMovementMatrix
-                              ? Icons.apps
-                              : Icons.apps_outlined,
-                          color: textColor,
+                      if (_driveWheels == 4 && _mecanumWheels)
+                        IconButton(
+                          tooltip: _showMovementMatrix
+                              ? (localizations?.hideMovementMatrix ??
+                                  'Hide movement matrix')
+                              : (localizations?.showMovementMatrix ??
+                                  'Show movement matrix'),
+                          icon: Icon(
+                            _showMovementMatrix
+                                ? Icons.apps
+                                : Icons.apps_outlined,
+                            color: textColor,
+                          ),
+                          onPressed: _toggleMovementMatrix,
                         ),
-                        onPressed: _toggleMovementMatrix,
-                      ),
                       IconButton(
                         icon: Icon(Icons.settings, color: textColor),
                         tooltip: localizations?.settings ?? 'Settings',
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () async {
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => SettingsPage(
@@ -328,6 +340,7 @@ class _ControlPageState extends State<ControlPage> {
                               ),
                             ),
                           );
+                          await _loadDriveSettings();
                         },
                       ),
                     ],
@@ -779,8 +792,11 @@ class _ControlPageState extends State<ControlPage> {
   void _sendCurrentControl() {
     final translated = _applyTranslationAssist(_leftJoystick);
     final forwardAxis = -translated.dy;
+    // If vehicle is 2-wheel or the user selected 4-wheel but not mecanum,
+    // do not send strafe (tx). Only send tx when mecanum is enabled.
+    final tx = (_driveWheels == 4 && _mecanumWheels) ? translated.dx : 0.0;
     _controlManager.sendJoystick(
-      translated.dx,
+      tx,
       forwardAxis,
       _rightJoystick.dx,
     );
@@ -798,6 +814,18 @@ class _ControlPageState extends State<ControlPage> {
     if (adjusted.dy.abs() < _translationAxisSnap) {
       adjusted = Offset(adjusted.dx, 0.0);
     }
+    // If vehicle is 2-wheel differential, approximate diagonal to nearest
+    // cardinal axis (prefer the larger axis).
+    if (_driveWheels == 2) {
+      if (adjusted.dx != 0.0 && adjusted.dy != 0.0) {
+        if (adjusted.dx.abs() > adjusted.dy.abs()) {
+          adjusted = Offset(adjusted.dx, 0.0);
+        } else {
+          adjusted = Offset(0.0, adjusted.dy);
+        }
+      }
+    }
+
     return adjusted;
   }
 
@@ -817,6 +845,19 @@ class _ControlPageState extends State<ControlPage> {
     setState(() => _activeMotion = null);
     _controlManager.setMotionCommand(null);
     _sendCurrentControl();
+  }
+
+  Future<void> _loadDriveSettings() async {
+    final wheels = await _settingsManager.loadDriveWheelsMode();
+    final mech = await _settingsManager.loadMecanumPreference();
+    if (!mounted) return;
+    setState(() {
+      _driveWheels = wheels;
+      _mecanumWheels = mech;
+      if (_driveWheels == 2) {
+        _showMovementMatrix = false;
+      }
+    });
   }
 
   Widget _buildMotionPad({required bool isLandscape}) {

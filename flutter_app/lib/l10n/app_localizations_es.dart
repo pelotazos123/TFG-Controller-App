@@ -174,13 +174,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get showMovementMatrix => 'Mostrar matriz de movimiento';
 
   @override
+  String get driveWheels => 'Ruedas de tracción';
+
+  @override
+  String get twoWheels => '2 ruedas';
+
+  @override
+  String get fourWheels => '4 ruedas';
+
+  @override
+  String get useMecanumWheels => 'Usar ruedas mecanum';
+
+  @override
   String get gpsWaiting => 'GPS: esperando telemetría...';
 
   @override
-  String get gpsFix => 'FIJO';
+  String get gpsFix => 'FIX';
 
   @override
-  String get gpsNoFix => 'SIN FIJO';
+  String get gpsNoFix => 'SIN FIX';
 
   @override
   String get gpsLatLabel => 'lat';
