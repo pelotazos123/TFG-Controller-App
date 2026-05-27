@@ -14,12 +14,13 @@ static bool hasFix = false;
 static unsigned long lastFixMs = 0;
 static unsigned long lastGpsTraceMs = 0;
 static bool lastTraceFixState = false;
+static unsigned long lastGpsSummaryMs = 0;
 
 void setupGPS() {
 	gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-	Serial.printf("GPS iniciado (RX=%d, TX=%d, %lu bps)\n", GPS_RX_PIN, GPS_TX_PIN, GPS_BAUD);
+	logTrace("INFO", "GPS", "started RX=%d TX=%d baud=%lu", GPS_RX_PIN, GPS_TX_PIN, (unsigned long)GPS_BAUD);
 	if (LOG_GPS_TRACES) {
-		Serial.println("GPS trace active: waiting for NMEA data...");
+		logTrace("INFO", "GPS", "waiting for NMEA data");
 	}
 }
 
@@ -31,7 +32,7 @@ void gpsUpdate() {
 	}
 
 	if (LOG_GPS_TRACES && bytesRead > 0 && millis() - lastGpsTraceMs >= 1000) {
-		Serial.printf("GPS RX: %lu bytes processed\n", (unsigned long)bytesRead);
+		logTrace("DEBUG", "GPS", "parsed %lu bytes of NMEA", (unsigned long)bytesRead);
 		lastGpsTraceMs = millis();
 	}
 
@@ -56,24 +57,29 @@ void gpsUpdate() {
 		}
 
 		if (LOG_GPS_TRACES && gps.location.isValid()) {
-			Serial.printf(
-				"GPS fix: lat=%.6f lon=%.6f alt=%.1f m speed=%.1f km/h sat=%lu age=%lu ms\n",
-				lastLat,
-				lastLon,
-				lastAltM,
-				lastSpeedKmph,
-				(unsigned long)lastSatellites,
-				(unsigned long)(millis() - lastFixMs)
-			);
+			if (millis() - lastGpsSummaryMs >= 2000) {
+				logTrace(
+					"INFO",
+					"GPS",
+					"valid=1 lat=%.6f lon=%.6f alt=%.1fm speed=%.1fkm/h sats=%lu age=%lums",
+					lastLat,
+					lastLon,
+					lastAltM,
+					lastSpeedKmph,
+					(unsigned long)lastSatellites,
+					(unsigned long)(millis() - lastFixMs)
+				);
+				lastGpsSummaryMs = millis();
+			}
 		}
 	}
 
 	if (LOG_GPS_TRACES && hasFix != lastTraceFixState) {
 		lastTraceFixState = hasFix;
 		if (hasFix) {
-			Serial.println("GPS fix acquired");
+			logTrace("INFO", "GPS", "fix acquired");
 		} else {
-			Serial.println("GPS fix lost");
+			logTrace("WARN", "GPS", "fix lost");
 		}
 	}
 
@@ -81,7 +87,7 @@ void gpsUpdate() {
 	if (hasFix && millis() - lastFixMs > 5000) {
 		hasFix = false;
 		if (LOG_GPS_TRACES) {
-			Serial.printf("GPS timeout: no valid fix for %lu ms\n", (unsigned long)(millis() - lastFixMs));
+			logTrace("WARN", "GPS", "timeout: no valid fix for %lu ms", (unsigned long)(millis() - lastFixMs));
 		}
 	}
 }

@@ -1,35 +1,12 @@
 #include "params.h"
 #include <math.h>
 
-// PWM config
-const int PWM_FREQ = 1000;
-const int PWM_RES = 8;  // 0-255
-const int PWM_MAX = (1 << PWM_RES) - 1;
-
-const float MOTOR_SLEW_RATE_PER_SEC = 10.0f;
-const float STRAFE_INPUT_SIGN = -1.0f;
-const float THROTTLE_INPUT_SIGN = -1.0f;
-
-// Minimum effective power where the car reliably moves.
-const float MIN_EFFECTIVE_POWER = 0.45f;
-
-// Use the same startup threshold on all wheels so standstill -> movement
-// happens at the same instant.
-const float START_CMD_ALL = 0.20f;
-
-const int MIN_DUTY_ALL = 80;
-
-// Motor polarity calibration.
-const float DIR_FRONT_LEFT = 1.0f;
-const float DIR_FRONT_RIGHT = 1.0f;
-const float DIR_REAR_LEFT = 1.0f;
-const float DIR_REAR_RIGHT = 1.0f;
-
 static float cmdFrontLeft = 0.0f;
 static float cmdFrontRight = 0.0f;
 static float cmdRearLeft = 0.0f;
 static float cmdRearRight = 0.0f;
 static unsigned long lastControlMs = 0;
+static unsigned long lastMotorTraceMs = 0;
 
 static void setL298Motor(
 	int in1,
@@ -258,4 +235,22 @@ void controlUpdate() {
 	const float maxDelta = computeMaxSlewDelta(millis());
 	applySlewToCurrentCommand(targets, maxDelta);
 	writeMotorOutputs();
+
+	if (LOG_CONTROL_PACKETS && millis() - lastMotorTraceMs >= 300) {
+		logTrace(
+			"INFO",
+			"MOTOR",
+			"intent tx=%.2f ty=%.2f sx=%.2f sy=%.2f slew=%.3f applied FL=%.2f FR=%.2f RL=%.2f RR=%.2f",
+			tx,
+			ty,
+			sx,
+			sy,
+			maxDelta,
+			cmdFrontLeft,
+			cmdFrontRight,
+			cmdRearLeft,
+			cmdRearRight
+		);
+		lastMotorTraceMs = millis();
+	}
 }

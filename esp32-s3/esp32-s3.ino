@@ -9,12 +9,8 @@ static const unsigned long MODE_RECOVERY_MS = 3000;
 bool modeChangePending = false;
 Mode pendingMode = MODE_NONE;
 unsigned long modeChangeStartMs = 0;
-static const unsigned long MODE_CHANGE_TIMEOUT_MS = 30000;
-
-static int lastButtonReading = HIGH;
-static int stableButtonState = HIGH;
-static bool buttonLatched = false;
-static unsigned long lastButtonDebounceMs = 0;
+unsigned long modeChangeDeadlineMs = 0;
+unsigned long modeTransitionHoldUntilMs = 0;
 
 static void forceMotorsOff() {
   pinMode(FRONT_IN1, OUTPUT);
@@ -46,57 +42,23 @@ static void forceMotorsOff() {
   digitalWrite(REAR_ENB, LOW);
 }
 
-static void setupModeButton() {
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
-  stableButtonState = digitalRead(PIN_BUTTON);
-  lastButtonReading = stableButtonState;
-  lastButtonDebounceMs = millis();
-  buttonLatched = (stableButtonState == LOW);
-  Serial.printf("Mode button on GPIO %d (INPUT_PULLUP)\n", PIN_BUTTON);
-}
-
-static void toggleMainMode() {
-  modeChangePending = false;
-  pendingMode = MODE_NONE;
-
-  Mode nextMode = (mainMode == MODE_WIFI_AP) ? MODE_BLE : MODE_WIFI_AP;
-  Serial.println("Button: toggle main mode");
-  saveMainMode(nextMode);
-  activateMainMode();
-}
-
-static void handleModeButton() {
-  int reading = digitalRead(PIN_BUTTON);
-  if (reading != lastButtonReading) {
-    lastButtonDebounceMs = millis();
-    lastButtonReading = reading;
-  }
-
-  if (millis() - lastButtonDebounceMs < MODE_BUTTON_DEBOUNCE_MS) {
-    return;
-  }
-
-  if (reading != stableButtonState) {
-    stableButtonState = reading;
-  }
-
-  if (stableButtonState == LOW && !buttonLatched) {
-    buttonLatched = true;
-    toggleMainMode();
-  } else if (stableButtonState == HIGH && buttonLatched) {
-    buttonLatched = false;
-  }
-}
-
 void setup() {
   forceMotorsOff();
   Serial.begin(115200);
   delay(1000);
-  Serial.println("ESP32-S3 boot");
+  logTrace(
+    "INFO",
+    "START",
+    "FW=TFG-Controller-App build=%s %s PWM=%dbit@%dHz AP=%s",
+    __DATE__,
+    __TIME__,
+    PWM_RES,
+    PWM_FREQ,
+    SOFTAP_LOCAL_IP.toString().c_str()
+  );
 
   controlSetup();
   setupGPS();
-  setupModeButton();
 
   loadPersistentSettings();
   activateMainMode();
@@ -104,7 +66,6 @@ void setup() {
 
 void loop() {
   gpsUpdate();
-  handleModeButton();
 
   applyPendingModeChange();
 
@@ -118,9 +79,9 @@ void loop() {
     lastModeActiveMs = now;
   }
 
-  if (modeChangePending && now - modeChangeStartMs > MODE_CHANGE_TIMEOUT_MS) {
+  if (modeChangePending && modeChangeDeadlineMs != 0 && now > modeChangeDeadlineMs) {
     modeChangePending = false;
-    Serial.println("Mode change timeout -> main mode");
+    logTrace("WARN", "MODE", "change timeout -> main mode");
     activateMainMode();
   }
 

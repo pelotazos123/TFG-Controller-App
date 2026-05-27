@@ -62,9 +62,6 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
       builder: (context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          onGenerateTitle: (context) {
-            return AppLocalizations.of(context)?.appTitle ?? 'RC Controller';
-          },
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -135,8 +132,6 @@ class _WelcomeSplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -144,9 +139,9 @@ class _WelcomeSplashPage extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              colorScheme.primary,
-              colorScheme.primaryContainer,
-              colorScheme.surface,
+              const Color(0xFF0F5B3B),
+              const Color(0xFF1F7A4E),
+              const Color(0xFF4BAA72),
             ],
           ),
         ),
@@ -155,41 +150,13 @@ class _WelcomeSplashPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 140,
-                  height: 140,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
+                SizedBox(
+                  width: 220,
+                  height: 220,
                   child: Image.asset(
                     'assets/icons/final-logo-amplified.png',
                     fit: BoxFit.contain,
                   ),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  AppLocalizations.of(context)?.appTitle ?? 'RC Controller',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  AppLocalizations.of(context)?.preparingControllerInterface ??
-                      'Preparing your controller interface',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
                 ),
               ],
             ),

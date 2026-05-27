@@ -40,10 +40,6 @@ Rear driver (L298N #2):
 - REAR_IN4 -> GPIO36
 - REAR_ENB -> GPIO35
 
-### 1.4 Mode button (physical toggle)
-- GPIO41 configured as INPUT_PULLUP
-- Short press toggles the saved main mode between WiFi AP and BLE
-
 ## 2) Software requirements
 
 - Arduino IDE 2.x

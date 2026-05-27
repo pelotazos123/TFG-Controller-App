@@ -9,9 +9,6 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'RC Controller';
-
-  @override
   String get settings => 'Settings';
 
   @override
@@ -218,10 +215,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unlockRotation => 'Unlock rotation';
-
-  @override
-  String get preparingControllerInterface =>
-      'Preparing your controller interface';
 
   @override
   String get moveForward => 'Move forward';

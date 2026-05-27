@@ -11,6 +11,11 @@ static uint16_t controlEndpointPort = 0;
 static bool hasControlEndpoint = false;
 static unsigned long lastGpsSendMs = 0;
 static const unsigned long GPS_SEND_MS = 1000;
+static unsigned long udpSessionStartMs = 0;
+static unsigned long udpPacketCount = 0;
+static unsigned long udpHelloCount = 0;
+static unsigned long udpHelloAckCount = 0;
+static bool udpFailsafeActive = false;
 
 static void updateControlEndpoint();
 
@@ -20,8 +25,10 @@ const char* const HELLO_ACK_TYPE = "hello_ack";
 
 void logUdpRx(int packetSize) {
   if (!LOG_TRANSPORT_ENDPOINTS) return;
-  Serial.printf(
-    "UDP RX %d bytes from %s:%u\n",
+  logTrace(
+    "DEBUG",
+    "UDP",
+    "rx %d bytes from %s:%u",
     packetSize,
     udp.remoteIP().toString().c_str(),
     udp.remotePort()
@@ -30,9 +37,7 @@ void logUdpRx(int packetSize) {
 
 void logUdpPayload(const char* label, const char* payload, size_t len) {
   if (!LOG_TRANSPORT_MESSAGES) return;
-  Serial.printf("UDP %s: ", label);
-  Serial.write((const uint8_t*)payload, len);
-  Serial.println();
+  logTrace("DEBUG", "UDP", "%s payload (%u bytes): %.*s", label, (unsigned int)len, (int)len, payload);
 }
 
 bool readPacketPayload(int packetSize, int& payloadLen) {
@@ -42,11 +47,7 @@ bool readPacketPayload(int packetSize, int& payloadLen) {
       discarded += udp.read(packetBuffer, sizeof(packetBuffer));
     }
     if (LOG_TRANSPORT_MESSAGES) {
-      Serial.printf(
-        "UDP packet too large: %d bytes (max %u)\n",
-        packetSize,
-        (unsigned int)(sizeof(packetBuffer) - 1)
-      );
+      logTrace("WARN", "UDP", "packet too large: %d bytes (max %u)", packetSize, (unsigned int)(sizeof(packetBuffer) - 1));
     }
     payloadLen = 0;
     return false;
@@ -66,9 +67,9 @@ bool parseJsonPacket(StaticJsonDocument<JSON_RX_CAPACITY>& doc) {
 
   if (LOG_TRANSPORT_MESSAGES) {
     if (err == DeserializationError::NoMemory) {
-      Serial.println("UDP JSON demasiado grande");
+      logTrace("WARN", "UDP", "JSON too large");
     } else {
-      Serial.printf("UDP JSON invalido: %s | raw: %s\n", err.c_str(), packetBuffer);
+      logTrace("WARN", "UDP", "JSON parse error: %s -> %.80s", err.c_str(), packetBuffer);
     }
   }
   return false;
@@ -77,13 +78,24 @@ bool parseJsonPacket(StaticJsonDocument<JSON_RX_CAPACITY>& doc) {
 void sendHelloAck() {
   StaticJsonDocument<64> ack;
   ack["type"] = HELLO_ACK_TYPE;
+  ack["server_ms"] = millis();
   char out[64];
   const size_t outLen = serializeJson(ack, out, sizeof(out));
   udp.beginPacket(udp.remoteIP(), udp.remotePort());
   udp.write((uint8_t*)out, outLen);
   udp.endPacket();
 
+  udpHelloAckCount++;
   logUdpPayload("TX", out, outLen);
+  logTrace(
+    "INFO",
+    "UDP",
+    "hello ack sent session=%lums hello=%lu ack=%lu packets=%lu",
+    (unsigned long)(millis() - udpSessionStartMs),
+    udpHelloCount,
+    udpHelloAckCount,
+    udpPacketCount
+  );
 }
 
 void onControlPacketApplied() {
@@ -94,14 +106,32 @@ void onControlPacketApplied() {
   updateControlEndpoint();
 
   if (LOG_CONTROL_PACKETS) {
-    Serial.printf("T(%.2f, %.2f) | S(%.2f, %.2f)\n", tx, ty, sx, sy);
+    logTrace(
+      "INFO",
+      "CONTROL",
+      "intent peer=%s:%u tx=%.2f ty=%.2f sx=%.2f sy=%.2f",
+      controlEndpointIp.toString().c_str(),
+      controlEndpointPort,
+      tx,
+      ty,
+      sx,
+      sy
+    );
   }
 }
 
 bool handleParsedPacket(JsonDocument& doc) {
   const char* msgType = doc["type"];
   if (msgType && strcmp(msgType, HELLO_TYPE) == 0) {
+    udpHelloCount++;
     updateControlEndpoint();
+    logTrace(
+      "INFO",
+      "UDP",
+      "hello from %s:%u",
+      controlEndpointIp.toString().c_str(),
+      controlEndpointPort
+    );
     if (currentMode == MODE_WIFI_AP) {
       noteModeActivity(currentMode);
     }
@@ -128,7 +158,12 @@ void udpResetControlEndpoint() {
   controlEndpointPort = 0;
   hasControlEndpoint = false;
   lastGpsSendMs = 0;
-  lastPacketMs = 0;
+  lastPacketMs = millis();
+  udpFailsafeActive = false;
+  udpSessionStartMs = millis();
+  udpPacketCount = 0;
+  udpHelloCount = 0;
+  udpHelloAckCount = 0;
 }
 
 static void updateControlEndpoint() {
@@ -167,6 +202,7 @@ void UDPtransport() {
   int packetSize = 0;
   while ((packetSize = udp.parsePacket()) > 0) {
     logUdpRx(packetSize);
+    udpPacketCount++;
 
     int payloadLen = 0;
     if (!readPacketPayload(packetSize, payloadLen)) continue;
@@ -181,6 +217,13 @@ void UDPtransport() {
   // Failsafe
   if (millis() - lastPacketMs > FAILSAFE_MS) {
     tx = ty = sx = sy = 0.0;
+    if (!udpFailsafeActive) {
+      udpFailsafeActive = true;
+      logTrace("WARN", "FS", "no control packet for %lu ms -> zero outputs", (unsigned long)(millis() - lastPacketMs));
+    }
+  } else if (udpFailsafeActive) {
+    udpFailsafeActive = false;
+    logTrace("INFO", "FS", "control recovered after timeout");
   }
 
   sendGpsTelemetryIfDue();

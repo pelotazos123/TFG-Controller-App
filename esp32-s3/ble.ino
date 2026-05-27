@@ -18,6 +18,9 @@ static unsigned long lastBleActivityMs = 0;
 static unsigned long lastBleDisconnectMs = 0;
 static unsigned long bleModeStartMs = 0;
 static unsigned long lastBleGpsMs = 0;
+static unsigned long bleSessionRxCount = 0;
+static unsigned long bleSessionTxCount = 0;
+static unsigned long bleSessionMalformedCount = 0;
 static const unsigned long BLE_GPS_SEND_MS = 1000;
 static const unsigned long BLE_WIFI_RETURN_MS = 1200;
 
@@ -30,15 +33,24 @@ class MyServerCallbacks : public BLEServerCallbacks {
     deviceConnected = true;
     noteModeActivity(MODE_BLE);
     if (LOG_TRANSPORT_ENDPOINTS) {
-      Serial.println("BLE client connected");
+      logTrace("INFO", "BLE", "client connected");
     }
   }
   void onDisconnect(BLEServer* pServer) override {
     deviceConnected = false;
     lastBleDisconnectMs = millis();
     if (LOG_TRANSPORT_ENDPOINTS) {
-      Serial.println("BLE client disconnected");
+      logTrace("INFO", "BLE", "client disconnected");
     }
+    logTrace(
+      "INFO",
+      "SESSION",
+      "BLE session duration=%lums rx=%lu tx=%lu malformed=%lu",
+      (unsigned long)(millis() - bleModeStartMs),
+      bleSessionRxCount,
+      bleSessionTxCount,
+      bleSessionMalformedCount
+    );
     delay(100);
     pServer->getAdvertising()->start();
   }
@@ -85,17 +97,20 @@ static void processBlePayload(const String& payload) {
   if (payload.length() == 0) return;
 
   if (LOG_TRANSPORT_MESSAGES) {
-    Serial.printf("BLE RX: %s\n", payload.c_str());
+    logTrace("DEBUG", "BLE", "rx payload: %s", payload.c_str());
   }
+
+  bleSessionRxCount++;
 
   StaticJsonDocument<JSON_RX_CAPACITY> doc;
   DeserializationError err = deserializeJson(doc, payload);
   if (err != DeserializationError::Ok) {
+    bleSessionMalformedCount++;
     if (LOG_TRANSPORT_MESSAGES) {
       if (err == DeserializationError::NoMemory) {
-        Serial.println("BLE JSON demasiado grande");
+        logTrace("WARN", "BLE", "JSON too large");
       } else {
-        Serial.printf("BLE JSON invalido: %s | raw: %s\n", err.c_str(), payload.c_str());
+        logTrace("WARN", "BLE", "JSON parse error: %s -> %.80s", err.c_str(), payload.c_str());
       }
     }
     return;
@@ -193,12 +208,22 @@ static void sendBleGpsTelemetryIfDue() {
   pTxCharacteristic->setValue((uint8_t*)out, outLen);
   if (deviceConnected) {
     pTxCharacteristic->notify();
+    bleSessionTxCount++;
   }
 
   if (LOG_TRANSPORT_MESSAGES) {
-    Serial.print("BLE TX: ");
-    Serial.write((const uint8_t*)out, outLen);
-    Serial.println();
+    logTrace(
+      "DEBUG",
+      "BLE",
+      "tx gps valid=%d lat=%.6f lon=%.6f alt=%.1fm speed=%.1fkm/h sats=%lu age=%lums",
+      gpsHasValidFix() ? 1 : 0,
+      gpsLatitude(),
+      gpsLongitude(),
+      gpsAltitudeM(),
+      gpsSpeedKmph(),
+      (unsigned long)gpsSatellites(),
+      (unsigned long)gpsFixAgeMs()
+    );
   }
 }
 
@@ -216,6 +241,10 @@ void activateBLE() {
   lastBlePacketMs = 0;
   lastBleActivityMs = 0;
   lastBleDisconnectMs = 0;
+  modeTransitionHoldUntilMs = millis() + 5000UL;
+  bleSessionRxCount = 0;
+  bleSessionTxCount = 0;
+  bleSessionMalformedCount = 0;
 
   currentMode = MODE_BLE;
 }

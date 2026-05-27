@@ -98,12 +98,6 @@ abstract class AppLocalizations {
     Locale('es'),
   ];
 
-  /// The title of the application
-  ///
-  /// In en, this message translates to:
-  /// **'RC Controller'**
-  String get appTitle;
-
   /// No description provided for @settings.
   ///
   /// In en, this message translates to:
@@ -511,12 +505,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unlock rotation'**
   String get unlockRotation;
-
-  /// No description provided for @preparingControllerInterface.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparing your controller interface'**
-  String get preparingControllerInterface;
 
   /// No description provided for @moveForward.
   ///

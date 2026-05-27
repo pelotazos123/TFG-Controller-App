@@ -1,6 +1,5 @@
 {
   "@@locale": "es",
-  "appTitle": "Controlador RC",
   "settings": "Ajustes",
   "language": "Idioma",
   "back": "Atrás",
@@ -69,7 +68,6 @@
   "rememberThis": "Recordar esto",
   "lockRotation": "Bloquear rotación",
   "unlockRotation": "Desbloquear rotación",
-  "preparingControllerInterface": "Preparando la interfaz del controlador",
   "moveForward": "Avanzar",
   "moveBackward": "Retroceder",
   "moveLeft": "Mover a la izquierda",

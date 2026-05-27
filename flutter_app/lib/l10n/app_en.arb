@@ -1,9 +1,5 @@
 {
   "@@locale": "en",
-  "appTitle": "RC Controller",
-  "@appTitle": {
-    "description": "The title of the application"
-  },
   "settings": "Settings",
   "language": "Language",
   "back": "Back",
@@ -72,7 +68,6 @@
   "rememberThis": "Remember this",
   "lockRotation": "Lock rotation",
   "unlockRotation": "Unlock rotation",
-  "preparingControllerInterface": "Preparing your controller interface",
   "moveForward": "Move forward",
   "moveBackward": "Move backward",
   "moveLeft": "Move left",

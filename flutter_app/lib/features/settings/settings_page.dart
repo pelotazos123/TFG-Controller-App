@@ -724,18 +724,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 '${(value * 100).toStringAsFixed(0)}%',
         ),
         SwitchListTile(
-          title: Text(localizations?.reverseStrafeX ?? 'Reverse Strafe (X)'),
-          subtitle: Text(
-            localizations?.leftJoystickHorizontalAxis ??
-                'Left joystick horizontal axis',
-          ),
-          value: _reverseSteering,
-          onChanged: (value) {
-            setState(() => _reverseSteering = value);
-            _controlManager.setReverseSteering(value);
-          },
-        ),
-        SwitchListTile(
           title: Text(
             localizations?.reverseForwardBackY ?? 'Reverse Forward/Back (Y)',
           ),
@@ -747,6 +735,20 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: (value) {
             setState(() => _reverseThrottle = value);
             _controlManager.setReverseThrottle(value);
+          },
+        ),
+        SwitchListTile(
+          title: Text(
+            localizations?.reverseStrafeX ?? 'Reverse Strafe (X)',
+          ),
+          subtitle: Text(
+            localizations?.leftJoystickHorizontalAxis ??
+                'Left joystick horizontal axis',
+          ),
+          value: _reverseSteering,
+          onChanged: (value) {
+            setState(() => _reverseSteering = value);
+            _controlManager.setReverseSteering(value);
           },
         ),
         SwitchListTile(
@@ -852,7 +854,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _buildAboutTile(
           icon: Icons.info_outline,
           title: localizations?.appName ?? 'App Name',
-          subtitle: localizations?.appTitle ?? 'RC Controller',
+          subtitle: 'RC Controller',
         ),
         _buildAboutTile(
           icon: Icons.tag,

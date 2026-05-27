@@ -19,34 +19,39 @@ void requestModeChange(const char* modeValue, const char* ssid, const char* pass
   Mode nextMode = MODE_NONE;
   if (!parseModeValue(modeValue, nextMode)) return;
 
+  logTrace("INFO", "MODE", "requested temporary change -> %s", modeValue);
   pendingMode = nextMode;
   modeChangePending = true;
   modeChangeStartMs = millis();
+  modeChangeDeadlineMs = millis() + ((nextMode == MODE_WIFI_AP && mainMode == MODE_BLE)
+    ? WIFI_AP_RETURN_TO_BLE_MS
+    : MODE_CHANGE_TIMEOUT_MS);
 }
 
 void requestMainModeChange(const char* modeValue, const char* ssid, const char* pass) {
   Mode nextMode = MODE_NONE;
   if (!parseModeValue(modeValue, nextMode)) return;
 
+  logTrace("INFO", "MODE", "saved main mode -> %s", modeValue);
   saveMainMode(nextMode);
 }
 
 void activateMainMode() {
   switch (mainMode) {
     case MODE_BLE:
-      Serial.println("Main mode -> BLE");
+      logTrace("INFO", "MODE", "main mode -> BLE");
       activateBLE();
       break;
     case MODE_WIFI_AP:
     default:
-      Serial.println("Main mode -> WiFi AP");
+      logTrace("INFO", "MODE", "main mode -> WiFi AP");
       activateWIFI_AP();
       break;
   }
 }
 
 void activateFallbackMode() {
-  Serial.println("Fallback -> WiFi AP");
+  logTrace("WARN", "MODE", "fallback -> WiFi AP");
   activateWIFI_AP();
 }
 
