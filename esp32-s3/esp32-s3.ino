@@ -58,15 +58,12 @@ void setup() {
   );
 
   controlSetup();
-  setupGPS();
 
   loadPersistentSettings();
   activateMainMode();
 }
 
 void loop() {
-  gpsUpdate();
-
   applyPendingModeChange();
 
   unsigned long now = millis();

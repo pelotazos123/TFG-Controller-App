@@ -18,7 +18,6 @@ Cross-platform Flutter application to control an ESP32-based remote device (RC c
 ## Features
 
 - Real-time remote control UI for an ESP32 device (BLE and UDP/Wi‑Fi transports).
-- GPS support and location display
 - Settings persistence across app restarts
 - Localization support (l10n)
 

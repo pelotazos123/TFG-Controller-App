@@ -17,10 +17,11 @@ class UdpTransport implements ControlTransport {
   Timer? _healthTimer;
   bool _healthCheckInProgress = false;
   bool _initialized = false;
+  final StreamController<TransportEvent> _terminalEvents =
+      StreamController<TransportEvent>.broadcast();
 
   InternetAddress? _targetAddress;
   int? _targetPort;
-  GpsTelemetry? _gpsTelemetry;
 
   bool get _hasSendEndpoint =>
       _initialized &&
@@ -33,8 +34,9 @@ class UdpTransport implements ControlTransport {
   @override
   bool get isConnected => _initialized;
 
+
   @override
-  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
+  Stream<TransportEvent> get terminalEvents => _terminalEvents.stream;
 
   @override
   Future<void> connect() async {
@@ -83,16 +85,29 @@ class UdpTransport implements ControlTransport {
               final pkt = parseIncomingPacket(decoded);
               if (pkt != null) {
                 if (pkt.type == 'hello_ack') {
-                  // Lock endpoint to the responder so AP/STA differences in source
-                  // endpoint handling do not break the handshake.
                   _targetAddress = dg.address;
                   _targetPort = dg.port;
+                  _terminalEvents.add(
+                    parseTransportEvent(decoded) ??
+                        TransportEvent(
+                          type: 'hello_ack',
+                          data: Map<String, dynamic>.from(decoded),
+                          receivedAt: DateTime.now(),
+                        ),
+                  );
                   if (!completer.isCompleted) completer.complete();
                   return;
                 }
 
-                if (pkt.type == 'gps') {
-                  _gpsTelemetry = parseGpsTelemetry(pkt.data);
+                if (pkt.type == 'log' || pkt.type == 'terminal') {
+                  _terminalEvents.add(
+                    parseTransportEvent(decoded) ??
+                        TransportEvent(
+                          type: pkt.type,
+                          data: Map<String, dynamic>.from(decoded),
+                          receivedAt: DateTime.now(),
+                        ),
+                  );
                   continue;
                 }
               }
@@ -152,7 +167,6 @@ class UdpTransport implements ControlTransport {
     _socket = null;
     _initialized = false;
     _targetPort = null;
-    _gpsTelemetry = null;
     
     unawaited(NetworkBindingService.clearBinding());
   }
@@ -215,6 +229,19 @@ class UdpTransport implements ControlTransport {
       debugPrint('UDP send failed, disconnecting');
       disconnect();
     }
+  }
+
+  @override
+  Future<void> sendTerminalCommand(String command) async {
+    final trimmed = command.trim();
+    if (trimmed.isEmpty) return;
+
+    _sendRawJson(
+      jsonEncode({
+        'type': 'terminal',
+        'command': trimmed,
+      }),
+    );
   }
 
   String? _decodePacket(List<int> data) {

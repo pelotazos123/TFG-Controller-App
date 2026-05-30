@@ -2,22 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
 import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
+import 'package:flutter_rccontroller_app/transport/transport_message.dart';
 
 class FakeTransport implements ControlTransport {
-  FakeTransport({this.connected = true, GpsTelemetry? gpsTelemetry})
-      : _gpsTelemetry = gpsTelemetry;
+  FakeTransport({this.connected = true});
 
   bool connected;
-  GpsTelemetry? _gpsTelemetry;
   final List<Map<String, double>> sent = [];
 
-  void setGps(GpsTelemetry? telemetry) => _gpsTelemetry = telemetry;
+  @override
+  Stream<TransportEvent> get terminalEvents => const Stream<TransportEvent>.empty();
 
   @override
   bool get isConnected => connected;
-
-  @override
-  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
 
   @override
   Future<void> connect() async {
@@ -52,6 +49,9 @@ class FakeTransport implements ControlTransport {
     String? ssid,
     String? password,
   }) async {}
+
+  @override
+  Future<void> sendTerminalCommand(String command) async {}
 }
 
 void main() {
@@ -144,41 +144,6 @@ void main() {
     expect(sent['sy'], closeTo(0.0, 0.0001));
   });
 
-  test('gps telemetry syncs from transport', () {
-    final transport = FakeTransport();
-    manager.setTransport(transport);
-
-    final gpsOne = GpsTelemetry(
-      valid: true,
-      latitude: 43.0,
-      longitude: -5.0,
-      altitude: 120.0,
-      speedKmph: 5.0,
-      satellites: 6,
-      ageMs: 100,
-      receivedAt: DateTime(2024, 1, 1),
-    );
-    transport.setGps(gpsOne);
-
-    manager.sendJoystick(0.0, 0.0, 0.0);
-    expect(manager.gpsTelemetry, gpsOne);
-
-    final gpsTwo = GpsTelemetry(
-      valid: false,
-      latitude: 42.5,
-      longitude: -5.5,
-      altitude: 80.0,
-      speedKmph: 0.0,
-      satellites: 3,
-      ageMs: 400,
-      receivedAt: DateTime(2024, 1, 2),
-    );
-    transport.setGps(gpsTwo);
-
-    manager.sendJoystick(0.0, 0.0, 0.0);
-    expect(manager.gpsTelemetry, gpsTwo);
-  });
-
   test('connect starts transport', () async {
     final transport = FakeTransport(connected: false);
     manager.setTransport(transport);
@@ -196,6 +161,5 @@ void main() {
 
     expect(transport.isConnected, isFalse);
     expect(manager.isConnected, isFalse);
-    expect(manager.gpsTelemetry, isNull);
   });
 }

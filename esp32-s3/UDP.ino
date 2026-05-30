@@ -6,11 +6,9 @@ WiFiUDP udp;
 char packetBuffer[256];
 float tx = 0, ty = 0, sx = 0, sy = 0;
 
-static IPAddress controlEndpointIp;
-static uint16_t controlEndpointPort = 0;
-static bool hasControlEndpoint = false;
-static unsigned long lastGpsSendMs = 0;
-static const unsigned long GPS_SEND_MS = 1000;
+IPAddress controlEndpointIp;
+uint16_t controlEndpointPort = 0;
+bool hasControlEndpoint = false;
 static unsigned long udpSessionStartMs = 0;
 static unsigned long udpPacketCount = 0;
 static unsigned long udpHelloCount = 0;
@@ -20,144 +18,148 @@ static bool udpFailsafeActive = false;
 static void updateControlEndpoint();
 
 namespace {
-const char* const HELLO_TYPE = "hello";
-const char* const HELLO_ACK_TYPE = "hello_ack";
+  const char* const HELLO_TYPE = "hello";
+  const char* const HELLO_ACK_TYPE = "hello_ack";
 
-void logUdpRx(int packetSize) {
-  if (!LOG_TRANSPORT_ENDPOINTS) return;
-  logTrace(
-    "DEBUG",
-    "UDP",
-    "rx %d bytes from %s:%u",
-    packetSize,
-    udp.remoteIP().toString().c_str(),
-    udp.remotePort()
-  );
-}
-
-void logUdpPayload(const char* label, const char* payload, size_t len) {
-  if (!LOG_TRANSPORT_MESSAGES) return;
-  logTrace("DEBUG", "UDP", "%s payload (%u bytes): %.*s", label, (unsigned int)len, (int)len, payload);
-}
-
-bool readPacketPayload(int packetSize, int& payloadLen) {
-  if (packetSize >= (int)sizeof(packetBuffer)) {
-    int discarded = udp.read(packetBuffer, sizeof(packetBuffer));
-    while (udp.available() > 0) {
-      discarded += udp.read(packetBuffer, sizeof(packetBuffer));
-    }
-    if (LOG_TRANSPORT_MESSAGES) {
-      logTrace("WARN", "UDP", "packet too large: %d bytes (max %u)", packetSize, (unsigned int)(sizeof(packetBuffer) - 1));
-    }
-    payloadLen = 0;
-    return false;
+  void logUdpRx(int packetSize) {
+    if (!LOG_TRANSPORT_ENDPOINTS) return;
+    logTrace(
+      "DEBUG",
+      "UDP",
+      "rx %d bytes from %s:%u",
+      packetSize,
+      udp.remoteIP().toString().c_str(),
+      udp.remotePort()
+    );
   }
 
-  payloadLen = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
-  if (payloadLen <= 0) return false;
-  packetBuffer[payloadLen] = 0;
-  return true;
-}
+  void logUdpPayload(const char* label, const char* payload, size_t len) {
+    if (!LOG_TRANSPORT_MESSAGES) return;
+    logTrace("DEBUG", "UDP", "%s payload (%u bytes): %.*s", label, (unsigned int)len, (int)len, payload);
+  }
 
-bool parseJsonPacket(StaticJsonDocument<JSON_RX_CAPACITY>& doc) {
-  const DeserializationError err = deserializeJson(doc, packetBuffer);
-  if (err == DeserializationError::Ok) {
+  bool readPacketPayload(int packetSize, int& payloadLen) {
+    if (packetSize >= (int)sizeof(packetBuffer)) {
+      int discarded = udp.read(packetBuffer, sizeof(packetBuffer));
+      while (udp.available() > 0) {
+        discarded += udp.read(packetBuffer, sizeof(packetBuffer));
+      }
+      if (LOG_TRANSPORT_MESSAGES) {
+        logTrace("WARN", "UDP", "packet too large: %d bytes (max %u)", packetSize, (unsigned int)(sizeof(packetBuffer) - 1));
+      }
+      payloadLen = 0;
+      return false;
+    }
+
+    payloadLen = udp.read(packetBuffer, sizeof(packetBuffer) - 1);
+    if (payloadLen <= 0) return false;
+    packetBuffer[payloadLen] = 0;
     return true;
   }
 
-  if (LOG_TRANSPORT_MESSAGES) {
-    if (err == DeserializationError::NoMemory) {
-      logTrace("WARN", "UDP", "JSON too large");
-    } else {
-      logTrace("WARN", "UDP", "JSON parse error: %s -> %.80s", err.c_str(), packetBuffer);
+  bool parseJsonPacket(StaticJsonDocument<JSON_RX_CAPACITY>& doc) {
+    const DeserializationError err = deserializeJson(doc, packetBuffer);
+    if (err == DeserializationError::Ok) {
+      return true;
     }
-  }
-  return false;
-}
 
-void sendHelloAck() {
-  StaticJsonDocument<64> ack;
-  ack["type"] = HELLO_ACK_TYPE;
-  ack["server_ms"] = millis();
-  char out[64];
-  const size_t outLen = serializeJson(ack, out, sizeof(out));
-  udp.beginPacket(udp.remoteIP(), udp.remotePort());
-  udp.write((uint8_t*)out, outLen);
-  udp.endPacket();
-
-  udpHelloAckCount++;
-  logUdpPayload("TX", out, outLen);
-  logTrace(
-    "INFO",
-    "UDP",
-    "hello ack sent session=%lums hello=%lu ack=%lu packets=%lu",
-    (unsigned long)(millis() - udpSessionStartMs),
-    udpHelloCount,
-    udpHelloAckCount,
-    udpPacketCount
-  );
-}
-
-void onControlPacketApplied() {
-  if (currentMode == MODE_WIFI_AP) {
-    noteModeActivity(currentMode);
+    if (LOG_TRANSPORT_MESSAGES) {
+      if (err == DeserializationError::NoMemory) {
+        logTrace("WARN", "UDP", "JSON too large");
+      } else {
+        logTrace("WARN", "UDP", "JSON parse error: %s -> %.80s", err.c_str(), packetBuffer);
+      }
+    }
+    return false;
   }
 
-  updateControlEndpoint();
+  void sendHelloAck() {
+    StaticJsonDocument<64> ack;
+    ack["type"] = HELLO_ACK_TYPE;
+    ack["server_ms"] = millis();
+    char out[64];
+    const size_t outLen = serializeJson(ack, out, sizeof(out));
+    udp.beginPacket(udp.remoteIP(), udp.remotePort());
+    udp.write((uint8_t*)out, outLen);
+    udp.endPacket();
 
-  if (LOG_CONTROL_PACKETS) {
-    logTrace(
-      "INFO",
-      "CONTROL",
-      "intent peer=%s:%u tx=%.2f ty=%.2f sx=%.2f sy=%.2f",
-      controlEndpointIp.toString().c_str(),
-      controlEndpointPort,
-      tx,
-      ty,
-      sx,
-      sy
-    );
-  }
-}
-
-bool handleParsedPacket(JsonDocument& doc) {
-  const char* msgType = doc["type"];
-  if (msgType && strcmp(msgType, HELLO_TYPE) == 0) {
-    udpHelloCount++;
-    updateControlEndpoint();
+    udpHelloAckCount++;
+    logUdpPayload("TX", out, outLen);
     logTrace(
       "INFO",
       "UDP",
-      "hello from %s:%u",
-      controlEndpointIp.toString().c_str(),
-      controlEndpointPort
+      "hello ack sent session=%lums hello=%lu ack=%lu packets=%lu",
+      (unsigned long)(millis() - udpSessionStartMs),
+      udpHelloCount,
+      udpHelloAckCount,
+      udpPacketCount
     );
+  }
+
+  void onControlPacketApplied() {
     if (currentMode == MODE_WIFI_AP) {
       noteModeActivity(currentMode);
     }
 
-    sendHelloAck();
-    return true;
+    updateControlEndpoint();
+
+    if (LOG_CONTROL_PACKETS) {
+      logTrace(
+        "INFO",
+        "CONTROL",
+        "intent peer=%s:%u tx=%.2f ty=%.2f sx=%.2f sy=%.2f",
+        controlEndpointIp.toString().c_str(),
+        controlEndpointPort,
+        tx,
+        ty,
+        sx,
+        sy
+      );
+    }
   }
 
-  if (handleModeCommand(doc)) {
-    return true;
-  }
+  bool handleParsedPacket(JsonDocument& doc) {
+    const char* msgType = doc["type"];
+    if (msgType && strcmp(msgType, HELLO_TYPE) == 0) {
+      udpHelloCount++;
+      updateControlEndpoint();
+      logTrace(
+        "INFO",
+        "UDP",
+        "hello from %s:%u",
+        controlEndpointIp.toString().c_str(),
+        controlEndpointPort
+      );
+      if (currentMode == MODE_WIFI_AP) {
+        noteModeActivity(currentMode);
+      }
 
-  if (applyControlPacket(doc, lastPacketMs)) {
-    onControlPacketApplied();
-    return true;
-  }
+      sendHelloAck();
+      return true;
+    }
 
-  return false;
+    if (msgType && strcmp(msgType, "terminal") == 0) {
+      handleTerminalCommand(doc);
+      return true;
+    }
+
+    if (handleModeCommand(doc)) {
+      return true;
+    }
+
+    if (applyControlPacket(doc, lastPacketMs)) {
+      onControlPacketApplied();
+      return true;
+    }
+
+    return false;
+  }
 }
-}  // namespace
 
 void udpResetControlEndpoint() {
   controlEndpointIp = IPAddress();
   controlEndpointPort = 0;
   hasControlEndpoint = false;
-  lastGpsSendMs = 0;
   lastPacketMs = millis();
   udpFailsafeActive = false;
   udpSessionStartMs = millis();
@@ -170,32 +172,6 @@ static void updateControlEndpoint() {
   controlEndpointIp = udp.remoteIP();
   controlEndpointPort = udp.remotePort();
   hasControlEndpoint = (controlEndpointPort != 0);
-}
-
-static void sendGpsTelemetryIfDue() {
-  if (!hasControlEndpoint) return;
-
-  unsigned long now = millis();
-  if (now - lastGpsSendMs < GPS_SEND_MS) return;
-  lastGpsSendMs = now;
-
-  StaticJsonDocument<192> gpsDoc;
-  gpsDoc["type"] = "gps";
-  gpsDoc["valid"] = gpsHasValidFix();
-  gpsDoc["lat"] = gpsLatitude();
-  gpsDoc["lon"] = gpsLongitude();
-  gpsDoc["alt"] = gpsAltitudeM();
-  gpsDoc["speed"] = gpsSpeedKmph();
-  gpsDoc["sat"] = gpsSatellites();
-  gpsDoc["age"] = gpsFixAgeMs();
-
-  char out[192];
-  size_t outLen = serializeJson(gpsDoc, out, sizeof(out));
-  udp.beginPacket(controlEndpointIp, controlEndpointPort);
-  udp.write((uint8_t*)out, outLen);
-  udp.endPacket();
-
-  logUdpPayload("TX", out, outLen);
 }
 
 void UDPtransport() {
@@ -226,5 +202,4 @@ void UDPtransport() {
     logTrace("INFO", "FS", "control recovered after timeout");
   }
 
-  sendGpsTelemetryIfDue();
 }

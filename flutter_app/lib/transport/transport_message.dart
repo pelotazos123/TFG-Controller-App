@@ -1,7 +1,55 @@
 import 'dart:convert';
-import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 
 const int maxInboundPacketBytes = 1024;
+
+class TransportEvent {
+  final String type;
+  final Map<String, dynamic> data;
+  final DateTime receivedAt;
+
+  TransportEvent({
+    required this.type,
+    required this.data,
+    required this.receivedAt,
+  });
+
+  String toDisplayLine() {
+    final prefix = '[${receivedAt.toIso8601String().substring(11, 19)}]';
+
+    switch (type) {
+        case 'log':
+        final level = (data['level'] as String?)?.toUpperCase() ?? 'INFO';
+        final tag = (data['tag'] as String?) ?? 'TERM';
+        final message = (data['message'] as String?) ?? '';
+        return '$prefix $level $tag: $message';
+      case 'hello_ack':
+        return '$prefix INFO UDP: hello_ack server_ms=${_formatInt(data['server_ms'])}';
+      case 'terminal':
+        final command = (data['command'] as String?) ?? '';
+        final message = (data['message'] as String?) ?? '';
+        return '$prefix TERM: $command${message.isEmpty ? '' : ' -> $message'}';
+      default:
+        return '$prefix ${type.toUpperCase()}: ${jsonEncode(data)}';
+    }
+  }
+}
+
+TransportEvent? parseTransportEvent(dynamic decoded) {
+  if (decoded is! Map) return null;
+
+  final typeValue = decoded['type'];
+  if (typeValue is! String) return null;
+
+  try {
+    return TransportEvent(
+      type: typeValue,
+      data: Map<String, dynamic>.from(decoded),
+      receivedAt: DateTime.now(),
+    );
+  } catch (_) {
+    return null;
+  }
+}
 
 String buildControlPayload(double tx, double ty, double sx, double sy) {
   return jsonEncode({
@@ -11,19 +59,6 @@ String buildControlPayload(double tx, double ty, double sx, double sy) {
     'sx': sx,
     'sy': sy,
   });
-}
-
-GpsTelemetry parseGpsTelemetry(Map data) {
-  return GpsTelemetry(
-    valid: data['valid'] == true,
-    latitude: _toDouble(data['lat']),
-    longitude: _toDouble(data['lon']),
-    altitude: _toDouble(data['alt']),
-    speedKmph: _toDouble(data['speed']),
-    satellites: _toInt(data['sat']),
-    ageMs: _toInt(data['age']),
-    receivedAt: DateTime.now(),
-  );
 }
 
 class IncomingPacket {
@@ -50,15 +85,13 @@ IncomingPacket? parseIncomingPacket(dynamic decoded) {
   return null;
 }
 
-double _toDouble(Object? value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0.0;
-  return 0.0;
-}
-
 int _toInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.round();
   if (value is String) return int.tryParse(value) ?? 0;
   return 0;
+}
+
+String _formatInt(Object? value) {
+  return _toInt(value).toString();
 }

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_rccontroller_app/transport/control_transport.dart';
-import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
+import 'package:flutter_rccontroller_app/transport/transport_message.dart';
 import 'package:flutter/foundation.dart';
 
 enum MotionCommand {
@@ -41,6 +41,10 @@ class ControlManager extends ChangeNotifier {
   int _currentTickMs = 0;
   bool _lastInputActive = false;
   final Stopwatch _sendStopwatch = Stopwatch()..start();
+  StreamSubscription<TransportEvent>? _terminalSub;
+  final List<TransportEvent> _terminalHistory = [];
+
+  static const int _terminalHistoryLimit = 200;
 
   static const int _activeSendIntervalMs = 33;
   static const int _idleSendIntervalMs = 200;
@@ -50,24 +54,19 @@ class ControlManager extends ChangeNotifier {
 
   bool _reverseSteering = false;
   bool _reverseThrottle = false;
-  bool _showTelemetry = true;
-
   double _tx = 0.0;
   double _ty = 0.0;
   double _sx = 0.0;
   MotionCommand? _activeMotion;
   double _activeMotionPower = 1.0;
 
-  GpsTelemetry? _gpsTelemetry;
-
   ControlTransport? get transport => _transport;
+  List<TransportEvent> get terminalHistory => List.unmodifiable(_terminalHistory);
 
   double get driveScale => _driveScale;
 
   bool get reverseSteering => _reverseSteering;
   bool get reverseThrottle => _reverseThrottle;
-  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
-  bool get showTelemetry => _showTelemetry;
 
   void setDriveScale(double value) {
     final clamped = value.clamp(0.2, 1.0);
@@ -88,12 +87,6 @@ class ControlManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setShowTelemetry(bool value) {
-    if (_showTelemetry == value) return;
-    _showTelemetry = value;
-    notifyListeners();
-  }
-
   bool get isConnected => _transport?.isConnected == true;
 
   void setTransport(ControlTransport transport) {
@@ -101,12 +94,14 @@ class ControlManager extends ChangeNotifier {
     if (previous != null && previous != transport) {
       previous.disconnect();
     }
+    _terminalSub?.cancel();
+    _terminalSub = null;
     _stopTimer();
     _lastSendMs = 0;
     _lastInputActive = false;
-    _gpsTelemetry = null;
     _transport = transport;
     _lastKnownConnected = transport.isConnected;
+    _terminalSub = transport.terminalEvents.listen(_recordTerminalEvent);
     notifyListeners();
   }
 
@@ -122,12 +117,13 @@ class ControlManager extends ChangeNotifier {
 
   void disconnect() {
     _stopTimer();
+    _terminalSub?.cancel();
+    _terminalSub = null;
     _transport?.disconnect();
     _lastKnownConnected = false;
     _lastSendMs = 0;
     _lastInputActive = false;
     _activeMotion = null;
-    _gpsTelemetry = null;
     notifyListeners();
   }
 
@@ -214,14 +210,12 @@ class ControlManager extends ChangeNotifier {
     final forceSend = isActiveInput != _lastInputActive;
     if (!forceSend && nowMs - _lastSendMs < effectiveInterval) {
       _lastInputActive = isActiveInput;
-      _syncGpsTelemetry(current);
       return;
     }
     _lastSendMs = nowMs;
     _lastInputActive = isActiveInput;
 
     current.send(tx: output.tx, ty: 0.0, sx: output.sx, sy: output.sy);
-    _syncGpsTelemetry(current);
   }
 
   ControlOutput _resolveCurrentOutput() {
@@ -281,14 +275,6 @@ class ControlManager extends ChangeNotifier {
       output.sx.abs() > _inputEpsilon;
   }
 
-  void _syncGpsTelemetry(ControlTransport transport) {
-    final latestGps = transport.gpsTelemetry;
-    if (latestGps != _gpsTelemetry) {
-      _gpsTelemetry = latestGps;
-      notifyListeners();
-    }
-  }
-
   int _minSendIntervalMs(ControlTransport transport) {
     if (transport is BleTransport) {
       return 40;
@@ -302,6 +288,13 @@ class ControlManager extends ChangeNotifier {
       _lastKnownConnected = false;
       _lastInputActive = false;
       notifyListeners();
+    }
+  }
+
+  void _recordTerminalEvent(TransportEvent event) {
+    _terminalHistory.add(event);
+    if (_terminalHistory.length > _terminalHistoryLimit) {
+      _terminalHistory.removeAt(0);
     }
   }
 }

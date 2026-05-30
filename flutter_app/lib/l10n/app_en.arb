@@ -34,8 +34,6 @@
   "leftJoystickHorizontalAxis": "Left joystick horizontal axis",
   "reverseForwardBackY": "Reverse Forward/Back (Y)",
   "leftJoystickVerticalAxis": "Left joystick vertical axis",
-  "showTelemetry": "Show telemetry",
-  "showTelemetryDescription": "Show GPS telemetry on the control screen",
   "appearance": "Appearance",
   "theme": "Theme",
   "system": "System",
@@ -56,13 +54,7 @@
   "twoWheels": "2 wheels",
   "fourWheels": "4 wheels",
   "useMecanumWheels": "Use mecanum wheels",
-  "gpsWaiting": "GPS: waiting for telemetry...",
-  "gpsFix": "FIX",
-  "gpsNoFix": "NO FIX",
-  "gpsLatLabel": "lat",
-  "gpsLonLabel": "lon",
-  "gpsSatLabel": "sat",
-  "gpsSpeedLabel": "speed",
+  
   "english": "English",
   "spanish": "Spanish",
   "rememberThis": "Remember this",
@@ -80,4 +72,11 @@
   "moveBackwardRight": "Move backward right",
   "invalidIpAddress": "Enter a valid IPv4 address",
   "invalidPort": "Enter a valid port (1-65535)"
+  ,
+  "terminalTitle": "Terminal",
+  "terminalNoTraffic": "No terminal traffic yet",
+  "terminalCommand": "Command",
+  "terminalCommandHint": "help, status, ping, echo hello",
+  "send": "Send",
+  "terminalAutoscroll": "Autoscroll"
 }

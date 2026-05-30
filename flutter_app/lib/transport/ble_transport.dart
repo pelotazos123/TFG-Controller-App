@@ -19,7 +19,8 @@ class BleTransport implements ControlTransport {
   StreamSubscription<List<int>>? _notifySub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
   bool _connected = false;
-  GpsTelemetry? _gpsTelemetry;
+  final StreamController<TransportEvent> _terminalEvents =
+      StreamController<TransportEvent>.broadcast();
 
   bool get _canSend => _connected && _rxChar != null;
 
@@ -27,7 +28,7 @@ class BleTransport implements ControlTransport {
   bool get isConnected => _connected;
 
   @override
-  GpsTelemetry? get gpsTelemetry => _gpsTelemetry;
+  Stream<TransportEvent> get terminalEvents => _terminalEvents.stream;
 
   @override
   Future<void> connect() async {
@@ -142,8 +143,17 @@ class BleTransport implements ControlTransport {
     try {
       final decoded = jsonDecode(raw);
       final pkt = parseIncomingPacket(decoded);
-      if (pkt != null && pkt.type == 'gps') {
-        _gpsTelemetry = parseGpsTelemetry(pkt.data);
+      if (pkt != null) {
+        if (pkt.type == 'log' || pkt.type == 'terminal' || pkt.type == 'hello_ack') {
+          _terminalEvents.add(
+            parseTransportEvent(decoded) ??
+                TransportEvent(
+                  type: pkt.type,
+                  data: Map<String, dynamic>.from(decoded),
+                  receivedAt: DateTime.now(),
+                ),
+          );
+        }
       }
     } catch (error) {
       debugPrint('BLE packet parse error: $error');
@@ -156,7 +166,6 @@ class BleTransport implements ControlTransport {
     _notifySub = null;
     _connectionSub?.cancel();
     _connectionSub = null;
-    _gpsTelemetry = null;
     _connected = false;
     final device = _device;
     _device = null;
@@ -178,6 +187,25 @@ class BleTransport implements ControlTransport {
     if (!_canSend) return;
     final payload = buildControlPayload(tx, ty, sx, sy);
     _writePayload(payload, withoutResponse: true, errorContext: 'send');
+  }
+
+  @override
+  Future<void> sendTerminalCommand(String command) async {
+    if (!_canSend) return;
+
+    final trimmed = command.trim();
+    if (trimmed.isEmpty) return;
+
+    final payload = jsonEncode({
+      'type': 'terminal',
+      'command': trimmed,
+    });
+
+    await _writePayloadAwaited(
+      payload,
+      withoutResponse: false,
+      errorContext: 'terminal command',
+    );
   }
 
   @override

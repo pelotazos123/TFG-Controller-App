@@ -17,11 +17,9 @@ static unsigned long lastBlePacketMs = 0;
 static unsigned long lastBleActivityMs = 0;
 static unsigned long lastBleDisconnectMs = 0;
 static unsigned long bleModeStartMs = 0;
-static unsigned long lastBleGpsMs = 0;
 static unsigned long bleSessionRxCount = 0;
 static unsigned long bleSessionTxCount = 0;
 static unsigned long bleSessionMalformedCount = 0;
-static const unsigned long BLE_GPS_SEND_MS = 1000;
 static const unsigned long BLE_WIFI_RETURN_MS = 1200;
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -85,6 +83,32 @@ static bool handleBleFallback() {
     return true;
   }
   return false;
+}
+
+void broadcastTrace(const char* level, const char* tag, const char* message) {
+  if (!LOG_TRANSPORT_MESSAGES) return;
+
+  StaticJsonDocument<256> doc;
+  doc["type"] = "log";
+  doc["level"] = level;
+  doc["tag"] = tag;
+  doc["message"] = message;
+  doc["ms"] = millis();
+
+  char out[256];
+  const size_t outLen = serializeJson(doc, out, sizeof(out));
+
+  if (currentMode == MODE_WIFI_AP && hasControlEndpoint && controlEndpointPort != 0) {
+    udp.beginPacket(controlEndpointIp, controlEndpointPort);
+    udp.write((uint8_t*)out, outLen);
+    udp.endPacket();
+    return;
+  }
+
+  if (currentMode == MODE_BLE && deviceConnected && pTxCharacteristic != nullptr) {
+    pTxCharacteristic->setValue((uint8_t*)out, outLen);
+    pTxCharacteristic->notify();
+  }
 }
 
 static void applyBleFailsafe() {
@@ -186,47 +210,6 @@ void stopBLE() {
   deviceConnected = false;
 }
 
-static void sendBleGpsTelemetryIfDue() {
-  if (!deviceConnected || pTxCharacteristic == nullptr) return;
-
-  unsigned long now = millis();
-  if (now - lastBleGpsMs < BLE_GPS_SEND_MS) return;
-  lastBleGpsMs = now;
-
-  StaticJsonDocument<192> gpsDoc;
-  gpsDoc["type"] = "gps";
-  gpsDoc["valid"] = gpsHasValidFix();
-  gpsDoc["lat"] = gpsLatitude();
-  gpsDoc["lon"] = gpsLongitude();
-  gpsDoc["alt"] = gpsAltitudeM();
-  gpsDoc["speed"] = gpsSpeedKmph();
-  gpsDoc["sat"] = gpsSatellites();
-  gpsDoc["age"] = gpsFixAgeMs();
-
-  char out[192];
-  size_t outLen = serializeJson(gpsDoc, out, sizeof(out));
-  pTxCharacteristic->setValue((uint8_t*)out, outLen);
-  if (deviceConnected) {
-    pTxCharacteristic->notify();
-    bleSessionTxCount++;
-  }
-
-  if (LOG_TRANSPORT_MESSAGES) {
-    logTrace(
-      "DEBUG",
-      "BLE",
-      "tx gps valid=%d lat=%.6f lon=%.6f alt=%.1fm speed=%.1fkm/h sats=%lu age=%lums",
-      gpsHasValidFix() ? 1 : 0,
-      gpsLatitude(),
-      gpsLongitude(),
-      gpsAltitudeM(),
-      gpsSpeedKmph(),
-      (unsigned long)gpsSatellites(),
-      (unsigned long)gpsFixAgeMs()
-    );
-  }
-}
-
 void activateBLE() {
   if (currentMode == MODE_BLE) return;
 
@@ -251,6 +234,5 @@ void activateBLE() {
 
 void BLEtransport() {
   applyBleFailsafe();
-  sendBleGpsTelemetryIfDue();
   if (handleBleFallback()) return;
 }

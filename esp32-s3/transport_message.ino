@@ -47,6 +47,50 @@ static const char* getMessageType(JsonDocument& doc) {
   return doc[KEY_TYPE];
 }
 
+static const char* getTerminalCommand(JsonDocument& doc) {
+  return doc["command"] | doc["text"] | "";
+}
+
+void handleTerminalCommand(JsonDocument& doc) {
+  const char* command = getTerminalCommand(doc);
+  if (command == nullptr || command[0] == '\0') {
+    logTrace("WARN", "TERM", "empty command");
+    return;
+  }
+
+  if (strcmp(command, "ping") == 0) {
+    logTrace("INFO", "TERM", "pong");
+    return;
+  }
+
+  if (strcmp(command, "help") == 0) {
+    logTrace("INFO", "TERM", "commands: ping, status, help, echo <text>");
+    return;
+  }
+
+  if (strcmp(command, "status") == 0) {
+    logTrace(
+      "INFO",
+      "TERM",
+      "mode=%d main=%d tx=%.2f ty=%.2f sx=%.2f sy=%.2f",
+      (int)currentMode,
+      (int)mainMode,
+      tx,
+      ty,
+      sx,
+      sy
+    );
+    return;
+  }
+
+  if (strncmp(command, "echo ", 5) == 0) {
+    logTrace("INFO", "TERM", "%s", command + 5);
+    return;
+  }
+
+  logTrace("WARN", "TERM", "unknown command: %s", command);
+}
+
 bool handleModeCommand(JsonDocument& doc) {
   const char* msgType = getMessageType(doc);
   if (isMessageType(msgType, "set_mode")) {
@@ -55,6 +99,11 @@ bool handleModeCommand(JsonDocument& doc) {
 
   if (isMessageType(msgType, "set_main_mode")) {
     return handleModeRequest(doc, true);
+  }
+
+  if (isMessageType(msgType, "terminal")) {
+    handleTerminalCommand(doc);
+    return true;
   }
 
   return false;

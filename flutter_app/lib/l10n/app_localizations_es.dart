@@ -116,13 +116,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get leftJoystickVerticalAxis => 'Eje vertical del joystick izquierdo';
 
   @override
-  String get showTelemetry => 'Mostrar telemetria';
-
-  @override
-  String get showTelemetryDescription =>
-      'Mostrar telemetria GPS en la pantalla de control';
-
-  @override
   String get appearance => 'Apariencia';
 
   @override
@@ -183,27 +176,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get useMecanumWheels => 'Usar ruedas mecanum';
 
   @override
-  String get gpsWaiting => 'GPS: esperando telemetría...';
-
-  @override
-  String get gpsFix => 'FIX';
-
-  @override
-  String get gpsNoFix => 'SIN FIX';
-
-  @override
-  String get gpsLatLabel => 'lat';
-
-  @override
-  String get gpsLonLabel => 'lon';
-
-  @override
-  String get gpsSatLabel => 'sat';
-
-  @override
-  String get gpsSpeedLabel => 'vel';
-
-  @override
   String get english => 'Inglés';
 
   @override
@@ -253,4 +225,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get invalidPort => 'Introduce un puerto valido (1-65535)';
+
+  @override
+  String get terminalTitle => 'Terminal';
+
+  @override
+  String get terminalNoTraffic => 'Sin tráfico de terminal aún';
+
+  @override
+  String get terminalCommand => 'Comando';
+
+  @override
+  String get terminalCommandHint => 'help, status, ping, echo hola';
+
+  @override
+  String get send => 'Enviar';
+
+  @override
+  String get terminalAutoscroll => 'Auto-desplazamiento';
 }

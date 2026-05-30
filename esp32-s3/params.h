@@ -65,12 +65,6 @@ const int REAR_IN3 = 37;   // Direction pin 1 for rear-right
 const int REAR_IN4 = 36;   // Direction pin 2 for rear-right
 const int REAR_ENB = 35;   // PWM for rear-right
 
-
-// ========= GPS (NEO-6M) =========
-const int GPS_RX_PIN = 42;
-const int GPS_TX_PIN = 41;
-const uint32_t GPS_BAUD = 9600;
-
 // ========= Wi-Fi AP =========
 const char AP_SSID[] = "ESP32_RC";
 const char AP_PASS[] = "123456789";
@@ -102,7 +96,17 @@ constexpr size_t JSON_RX_CAPACITY =
 const bool LOG_TRANSPORT_MESSAGES = true;
 const bool LOG_TRANSPORT_ENDPOINTS = true;
 const bool LOG_CONTROL_PACKETS = true;
-const bool LOG_GPS_TRACES = true;
+
+class BLECharacteristic;
+extern WiFiUDP udp;
+extern IPAddress controlEndpointIp;
+extern uint16_t controlEndpointPort;
+extern bool hasControlEndpoint;
+extern BLECharacteristic* pTxCharacteristic;
+extern bool deviceConnected;
+
+void handleTerminalCommand(JsonDocument& doc);
+void broadcastTrace(const char* level, const char* tag, const char* message);
 
 static inline void logTrace(const char* level, const char* tag, const char* fmt, ...) {
   unsigned long totalSeconds = millis() / 1000UL;
@@ -119,6 +123,7 @@ static inline void logTrace(const char* level, const char* tag, const char* fmt,
   va_end(args);
 
   Serial.println(buffer);
+  broadcastTrace(level, tag, buffer);
 }
 
 // ========= Timing =========
@@ -139,6 +144,9 @@ enum Mode {
   MODE_WIFI_AP,
   MODE_BLE
 };
+
+extern Mode currentMode;
+extern Mode mainMode;
 
 struct WheelTargets {
   float frontLeft;
@@ -187,16 +195,5 @@ void BLEtransport();
 // ========= Transport JSON =========
 bool handleModeCommand(JsonDocument& doc);
 bool applyControlPacket(JsonDocument& doc, unsigned long& lastPacketMs);
-
-// ========= GPS API =========
-void setupGPS();
-void gpsUpdate();
-bool gpsHasValidFix();
-double gpsLatitude();
-double gpsLongitude();
-double gpsAltitudeM();
-double gpsSpeedKmph();
-uint32_t gpsSatellites();
-uint32_t gpsFixAgeMs();
 
 #endif

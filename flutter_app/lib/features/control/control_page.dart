@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
+import 'package:flutter_rccontroller_app/features/terminal/terminal_page.dart';
 import 'package:flutter_rccontroller_app/l10n/app_localizations.dart';
 import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
-import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/transport/udp_transport.dart';
 
 import '../../locale_provider.dart';
@@ -224,7 +224,6 @@ class _ControlPageState extends State<ControlPage> {
   Widget _buildStatusBar() {
     final localizations = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
     final textColor = isDark ? Colors.white : Colors.black;
     final connectedColor = isDark ? Colors.green : Colors.green[700]!;
     final disconnectedColor = isDark ? Colors.red : Colors.red[700]!;
@@ -234,8 +233,6 @@ class _ControlPageState extends State<ControlPage> {
       builder: (context, _) {
         final isConnected = _controlManager.isConnected;
         final transport = _controlManager.transport;
-        final gps = _controlManager.gpsTelemetry;
-        final showTelemetry = _controlManager.showTelemetry;
         final rotationTooltip = _isLandscapeLocked
           ? (localizations?.unlockRotation ?? 'Unlock rotation')
           : (localizations?.lockRotation ?? 'Lock rotation');
@@ -250,12 +247,6 @@ class _ControlPageState extends State<ControlPage> {
           BleTransport() => Icons.bluetooth_disabled,
           _ => Icons.link_off,
         };
-
-        final gpsColor = showTelemetry
-          ? (gps == null
-            ? textColor.withValues(alpha: 0.8)
-            : (gps.valid ? connectedColor : disconnectedColor))
-          : textColor;
 
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -328,6 +319,18 @@ class _ControlPageState extends State<ControlPage> {
                           onPressed: _toggleMovementMatrix,
                         ),
                       IconButton(
+                        icon: Icon(Icons.terminal, color: textColor),
+                        tooltip: 'Terminal',
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TerminalPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
                         icon: Icon(Icons.settings, color: textColor),
                         tooltip: localizations?.settings ?? 'Settings',
                         onPressed: () async {
@@ -347,326 +350,11 @@ class _ControlPageState extends State<ControlPage> {
                   ),
                 ],
               ),
-              if (showTelemetry) ...[
-                const SizedBox(height: 4),
-                if (isConnected && gps != null)
-                  _buildGpsTelemetryCard(
-                    gps: gps,
-                    localizations: localizations,
-                    connectedColor: connectedColor,
-                    disconnectedColor: disconnectedColor,
-                    isLandscape: isLandscape,
-                  )
-                else
-                  Text(
-                    _gpsLabel(gps, isConnected: isConnected),
-                    style: TextStyle(
-                      color: gpsColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
             ],
           ),
         );
       },
     );
-  }
-
-  Widget _buildGpsTelemetryCard({
-    required GpsTelemetry gps,
-    required AppLocalizations? localizations,
-    required Color connectedColor,
-    required Color disconnectedColor,
-    required bool isLandscape,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
-    final surfaceColor = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.white;
-    final borderColor = (gps.valid ? connectedColor : disconnectedColor)
-        .withValues(alpha: 0.35);
-    final accentColor = gps.valid ? connectedColor : disconnectedColor;
-    final mutedTextColor = textColor.withValues(alpha: 0.66);
-    final labelFontSize = isLandscape ? 8.0 : 10.0;
-    final valueFontSize = isLandscape ? 10.5 : 13.0;
-    final tileWidth = isLandscape ? 104.0 : 150.0;
-
-    final state = gps.valid
-        ? (localizations?.gpsFix ?? 'FIX')
-        : (localizations?.gpsNoFix ?? 'NO FIX');
-    final lat = gps.latitude.toStringAsFixed(6);
-    final lon = gps.longitude.toStringAsFixed(6);
-    final speed = gps.speedKmph.toStringAsFixed(1);
-    final altitude = gps.altitude.toStringAsFixed(1);
-    final ageSeconds = (gps.ageMs / 1000).toStringAsFixed(1);
-    final latLabel = localizations?.gpsLatLabel ?? 'lat';
-    final lonLabel = localizations?.gpsLonLabel ?? 'lon';
-    final satLabel = localizations?.gpsSatLabel ?? 'sat';
-    final speedLabel = localizations?.gpsSpeedLabel ?? 'speed';
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isLandscape ? 8 : 14,
-        vertical: isLandscape ? 6 : 14,
-      ),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
-            blurRadius: isLandscape ? 8 : 14,
-            offset: Offset(0, isLandscape ? 3 : 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: isLandscape ? 28 : 42,
-                height: isLandscape ? 28 : 42,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.gps_fixed,
-                  color: accentColor,
-                  size: isLandscape ? 15 : 22,
-                ),
-              ),
-              SizedBox(width: isLandscape ? 6 : 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localizations?.gpsWaiting ?? 'GPS: waiting for telemetry...',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: isLandscape ? 11.5 : 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (!isLandscape) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        '$state · ${gps.satellites} $satLabel · $ageSeconds s',
-                        style: TextStyle(
-                          color: mutedTextColor,
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!isLandscape)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    state,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: isLandscape ? 4 : 12),
-          if (isLandscape)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildGpsMetric(
-                    label: latLabel,
-                    value: lat,
-                    accentColor: accentColor,
-                    textColor: textColor,
-                    width: tileWidth,
-                    labelFontSize: labelFontSize,
-                    valueFontSize: valueFontSize,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildGpsMetric(
-                    label: lonLabel,
-                    value: lon,
-                    accentColor: accentColor,
-                    textColor: textColor,
-                    width: tileWidth,
-                    labelFontSize: labelFontSize,
-                    valueFontSize: valueFontSize,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildGpsMetric(
-                    label: speedLabel,
-                    value: '$speed km/h',
-                    accentColor: accentColor,
-                    textColor: textColor,
-                    width: tileWidth,
-                    labelFontSize: labelFontSize,
-                    valueFontSize: valueFontSize,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildGpsMetric(
-                    label: 'alt',
-                    value: '$altitude m',
-                    accentColor: accentColor,
-                    textColor: textColor,
-                    width: tileWidth,
-                    labelFontSize: labelFontSize,
-                    valueFontSize: valueFontSize,
-                  ),
-                ),
-              ],
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildGpsMetric(
-                  label: latLabel,
-                  value: lat,
-                  accentColor: accentColor,
-                  textColor: textColor,
-                  width: tileWidth,
-                  labelFontSize: labelFontSize,
-                  valueFontSize: valueFontSize,
-                ),
-                _buildGpsMetric(
-                  label: lonLabel,
-                  value: lon,
-                  accentColor: accentColor,
-                  textColor: textColor,
-                  width: tileWidth,
-                  labelFontSize: labelFontSize,
-                  valueFontSize: valueFontSize,
-                ),
-                _buildGpsMetric(
-                  label: speedLabel,
-                  value: '$speed km/h',
-                  accentColor: accentColor,
-                  textColor: textColor,
-                  width: tileWidth,
-                  labelFontSize: labelFontSize,
-                  valueFontSize: valueFontSize,
-                ),
-                _buildGpsMetric(
-                  label: 'alt',
-                  value: '$altitude m',
-                  accentColor: accentColor,
-                  textColor: textColor,
-                  width: tileWidth,
-                  labelFontSize: labelFontSize,
-                  valueFontSize: valueFontSize,
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGpsMetric({
-    required String label,
-    required String value,
-    required Color accentColor,
-    required Color textColor,
-    required double width,
-    required double labelFontSize,
-    required double valueFontSize,
-  }) {
-    return Semantics(
-      container: true,
-      label: '${label.toUpperCase()}: $value',
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: BoxDecoration(
-          color: accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: ExcludeSemantics(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: TextStyle(
-                  color: textColor.withValues(alpha: 0.6),
-                  fontSize: labelFontSize,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: valueFontSize,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _gpsLabel(GpsTelemetry? gps, {required bool isConnected}) {
-    final localizations = AppLocalizations.of(context);
-
-    if (!isConnected) {
-      return localizations?.gpsWaiting ?? 'GPS: searching...';
-    }
-
-    if (gps == null) {
-      return localizations?.gpsWaiting ?? 'GPS: waiting for telemetry...';
-    }
-
-    final state = gps.valid
-        ? (localizations?.gpsFix ?? 'FIX')
-        : (localizations?.gpsNoFix ?? 'NO FIX');
-    final lat = gps.latitude.toStringAsFixed(6);
-    final lon = gps.longitude.toStringAsFixed(6);
-    final speed = gps.speedKmph.toStringAsFixed(1);
-    final latLabel = localizations?.gpsLatLabel ?? 'lat';
-    final lonLabel = localizations?.gpsLonLabel ?? 'lon';
-    final satLabel = localizations?.gpsSatLabel ?? 'sat';
-    final speedLabel = localizations?.gpsSpeedLabel ?? 'speed';
-
-    return 'GPS $state | $latLabel: $lat | $lonLabel: $lon | $satLabel: ${gps.satellites} | $speedLabel: $speed km/h';
   }
 
   Widget _buildJoystick({

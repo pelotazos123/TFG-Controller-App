@@ -302,18 +302,6 @@ abstract class AppLocalizations {
   /// **'Left joystick vertical axis'**
   String get leftJoystickVerticalAxis;
 
-  /// No description provided for @showTelemetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Show telemetry'**
-  String get showTelemetry;
-
-  /// No description provided for @showTelemetryDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Show GPS telemetry on the control screen'**
-  String get showTelemetryDescription;
-
   /// No description provided for @appearance.
   ///
   /// In en, this message translates to:
@@ -434,48 +422,6 @@ abstract class AppLocalizations {
   /// **'Use mecanum wheels'**
   String get useMecanumWheels;
 
-  /// No description provided for @gpsWaiting.
-  ///
-  /// In en, this message translates to:
-  /// **'GPS: waiting for telemetry...'**
-  String get gpsWaiting;
-
-  /// No description provided for @gpsFix.
-  ///
-  /// In en, this message translates to:
-  /// **'FIX'**
-  String get gpsFix;
-
-  /// No description provided for @gpsNoFix.
-  ///
-  /// In en, this message translates to:
-  /// **'NO FIX'**
-  String get gpsNoFix;
-
-  /// No description provided for @gpsLatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'lat'**
-  String get gpsLatLabel;
-
-  /// No description provided for @gpsLonLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'lon'**
-  String get gpsLonLabel;
-
-  /// No description provided for @gpsSatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'sat'**
-  String get gpsSatLabel;
-
-  /// No description provided for @gpsSpeedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'speed'**
-  String get gpsSpeedLabel;
-
   /// No description provided for @english.
   ///
   /// In en, this message translates to:
@@ -577,6 +523,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a valid port (1-65535)'**
   String get invalidPort;
+
+  /// No description provided for @terminalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminal'**
+  String get terminalTitle;
+
+  /// No description provided for @terminalNoTraffic.
+  ///
+  /// In en, this message translates to:
+  /// **'No terminal traffic yet'**
+  String get terminalNoTraffic;
+
+  /// No description provided for @terminalCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Command'**
+  String get terminalCommand;
+
+  /// No description provided for @terminalCommandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'help, status, ping, echo hello'**
+  String get terminalCommandHint;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @terminalAutoscroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Autoscroll'**
+  String get terminalAutoscroll;
 }
 
 class _AppLocalizationsDelegate

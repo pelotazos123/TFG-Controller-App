@@ -42,7 +42,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _reverseThrottle = false;
   bool _reverseSteering = false;
   bool _skipBluetoothReminder = false;
-  bool _showTelemetry = true;
   int _driveWheels = 4;
   bool _mecanumWheels = false;
 
@@ -86,7 +85,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _loadMainMode();
     _loadBluetoothReminderPreference();
-    _loadTelemetryPreference();
     _loadDriveWheelsPreference();
     _loadMecanumPreference();
 
@@ -127,13 +125,6 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _skipBluetoothReminder = value);
   }
 
-  Future<void> _loadTelemetryPreference() async {
-    final show = await _settingsManager.loadTelemetryPreference();
-    if (!mounted) return;
-    setState(() => _showTelemetry = show);
-    _controlManager.setShowTelemetry(show);
-  }
-
   Future<void> _loadDriveWheelsPreference() async {
     final wheels = await _settingsManager.loadDriveWheelsMode();
     if (!mounted) return;
@@ -152,10 +143,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _persistMecanumPreference(bool value) async {
     await _settingsManager.persistMecanumPreference(value);
-  }
-
-  Future<void> _persistTelemetryPreference(bool value) async {
-    await _settingsManager.persistTelemetryPreference(value);
   }
 
   Future<void> _persistMainMode(ControllerMode mode) async {
@@ -749,19 +736,6 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: (value) {
             setState(() => _reverseSteering = value);
             _controlManager.setReverseSteering(value);
-          },
-        ),
-        SwitchListTile(
-          title: Text(localizations?.showTelemetry ?? 'Show telemetry'),
-          subtitle: Text(
-            localizations?.showTelemetryDescription ??
-                'Show GPS telemetry on the control screen',
-          ),
-          value: _showTelemetry,
-          onChanged: (value) async {
-            setState(() => _showTelemetry = value);
-            _controlManager.setShowTelemetry(value);
-            await _persistTelemetryPreference(value);
           },
         ),
         const SizedBox(height: 8),

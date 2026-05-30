@@ -3,7 +3,6 @@ ESP32-S3 firmware for the RC controller platform used in this project.
 This firmware handles:
 - Motor control (4 motors through 2x L298N)
 - UDP control input from the Flutter app
-- GPS telemetry (NEO-6M)
 - WiFi AP or BLE startup modes
 
 ## 1) Hardware setup
@@ -12,16 +11,9 @@ This firmware handles:
 - ESP32-S3 development board
 - 2x L298N motor driver boards
 - 4 DC motors
-- NEO-6M GPS module
 - External power for motors (do not power motors from ESP32 3V3)
 
-### 1.2 GPS wiring (NEO-6M)
-- NEO-6M VCC -> ESP32 3V3 (or 5V if your module requires it)
-- NEO-6M GND -> ESP32 GND
-- NEO-6M TX -> ESP32 GPIO1 (GPS_RX_PIN)
-- NEO-6M RX -> ESP32 GPIO2 (GPS_TX_PIN)
-
-### 1.3 Motor driver pin map
+### 1.2 Motor driver pin map
 Pins are defined in params.h.
 
 Front driver (L298N #1):
@@ -45,7 +37,6 @@ Rear driver (L298N #2):
 - Arduino IDE 2.x
 - ESP32 board package (Espressif)
 - Libraries:
-	- TinyGPSPlus
 	- ArduinoJson
 
 Notes:
@@ -84,7 +75,6 @@ Defined in wifi_ap.ino:
 6. Open Serial Monitor at 115200 baud.
 
 Expected startup output (AP mode):
-- GPS initialized message
 - WiFi AP created message
 - AP IP address
 - UDP listening on port 4210
@@ -116,37 +106,19 @@ Control values are read from:
 
 If packets stop arriving, failsafe sets all axes to zero after 300 ms.
 
-### 5.3 GPS telemetry packet
-Sent once per second to the active control endpoint:
-
-{
-	"type": "gps",
-	"valid": true,
-	"lat": 40.416775,
-	"lon": -3.703790,
-	"alt": 680.2,
-	"speed": 1.4,
-	"sat": 8,
-	"age": 520
-}
-
 ## 6) Control protocol (BLE)
 
-BLE uses the same JSON control shape as UDP for `tx`, `ty`, `sx`, and `sy`.
-
-GPS telemetry is still sent as JSON notifications on the TX characteristic.
+BLE uses the same JSON control shape as UDP for `tx`, `sx`, and `sy`.
 
 ## 7) Quick validation checklist
 
 - Motors stay stopped at boot
 - UDP control packets are visible on serial output
 - Robot stops if app closes or packets are interrupted
-- GPS valid field changes to true when fix is available
 
 ## 8) Common issues
 
 - No upload: verify board/port and USB cable (data cable, not charge-only)
-- No GPS data: verify TX/RX wiring and antenna visibility to open sky
 - No UDP control: check phone/PC network and startup mode (AP vs BLE)
 - No BLE control: ensure the device is bonded and Bluetooth is enabled
 - Unstable motor behavior: verify driver wiring and common ground between ESP32 and motor driver supply
