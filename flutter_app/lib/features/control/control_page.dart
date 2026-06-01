@@ -227,11 +227,13 @@ class _ControlPageState extends State<ControlPage> {
     final textColor = isDark ? Colors.white : Colors.black;
     final connectedColor = isDark ? Colors.green : Colors.green[700]!;
     final disconnectedColor = isDark ? Colors.red : Colors.red[700]!;
+    final connectingColor = isDark ? Colors.orange[300]! : Colors.orange[700]!;
 
     return ListenableBuilder(
       listenable: _controlManager,
       builder: (context, _) {
         final isConnected = _controlManager.isConnected;
+        final isConnecting = _controlManager.isConnecting;
         final transport = _controlManager.transport;
         final rotationTooltip = _isLandscapeLocked
           ? (localizations?.unlockRotation ?? 'Unlock rotation')
@@ -247,6 +249,22 @@ class _ControlPageState extends State<ControlPage> {
           BleTransport() => Icons.bluetooth_disabled,
           _ => Icons.link_off,
         };
+        final connectingIcon = switch (transport) {
+          UdpTransport() => Icons.wifi_tethering,
+          BleTransport() => Icons.bluetooth_searching,
+          _ => Icons.sync,
+        };
+        final statusIcon = isConnected
+            ? connectedIcon
+            : (isConnecting ? connectingIcon : disconnectedIcon);
+        final statusColor = isConnected
+            ? connectedColor
+            : (isConnecting ? connectingColor : disconnectedColor);
+        final statusLabel = isConnected
+            ? (localizations?.connected ?? 'CONNECTED')
+            : (isConnecting
+                ? (localizations?.connecting ?? 'CONNECTING...')
+                : (localizations?.disconnected ?? 'DISCONNECTED'));
 
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -260,19 +278,15 @@ class _ControlPageState extends State<ControlPage> {
                   Row(
                     children: [
                       Icon(
-                        isConnected ? connectedIcon : disconnectedIcon,
-                        color: isConnected ? connectedColor : disconnectedColor,
+                        statusIcon,
+                        color: statusColor,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        isConnected
-                            ? (localizations?.connected ?? 'CONNECTED')
-                            : (localizations?.disconnected ?? 'DISCONNECTED'),
+                        statusLabel,
                         style: TextStyle(
-                          color: isConnected
-                              ? connectedColor
-                              : disconnectedColor,
+                          color: statusColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

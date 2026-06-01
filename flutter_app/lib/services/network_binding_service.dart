@@ -41,11 +41,17 @@ class NetworkBindingService {
     }
   }
 
-  static Future<bool> isWifiBound() async {
+  static Future<bool> isWifiBound({String? targetHost}) async {
     if (!Platform.isAndroid) return true;
 
     try {
-      return await _channel.invokeMethod<bool>('isWifiBound') ?? false;
+      return await _channel.invokeMethod<bool>(
+            'isWifiBound',
+            {
+              'targetHost': targetHost,
+            },
+          ) ??
+          false;
     } on MissingPluginException {
       return true;
     } on PlatformException {

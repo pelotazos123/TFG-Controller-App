@@ -37,7 +37,10 @@ class MainActivity : FlutterActivity() {
                     result
                 )
 
-                "isWifiBound" -> result.success(boundNetwork != null)
+                "isWifiBound" -> {
+                    val targetHost = call.argument<String>("targetHost")
+                    result.success(isWifiBound(targetHost))
+                }
 
                 "clearBinding" -> {
                     clearBinding()
@@ -84,6 +87,23 @@ class MainActivity : FlutterActivity() {
         clearBinding()
 
         requestWifiNetwork(connectivityManager, targetAddress, result)
+    }
+
+    private fun isWifiBound(targetHost: String?): Boolean {
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val network = boundNetwork ?: return false
+        if (!isUsableWifiNetwork(connectivityManager, network)) return false
+
+        val targetAddress = parseTargetAddress(targetHost)
+        if (targetAddress != null &&
+            !networkCanReachTarget(connectivityManager, network, targetAddress)
+        ) {
+            return false
+        }
+
+        return true
     }
 
     private fun requestWifiNetwork(

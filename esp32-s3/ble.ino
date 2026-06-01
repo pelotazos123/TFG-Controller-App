@@ -21,6 +21,7 @@ static unsigned long bleSessionRxCount = 0;
 static unsigned long bleSessionTxCount = 0;
 static unsigned long bleSessionMalformedCount = 0;
 static const unsigned long BLE_WIFI_RETURN_MS = 1200;
+static bool bleFailsafeActive = false;
 
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -114,6 +115,18 @@ void broadcastTrace(const char* level, const char* tag, const char* message) {
 static void applyBleFailsafe() {
   if (millis() - lastBlePacketMs > FAILSAFE_MS) {
     tx = ty = sx = sy = 0.0f;
+    if (!bleFailsafeActive) {
+      bleFailsafeActive = true;
+      logTrace(
+        "WARN",
+        "FS",
+        "no control packet for %lu ms -> zero outputs",
+        (unsigned long)(millis() - lastBlePacketMs)
+      );
+    }
+  } else if (bleFailsafeActive) {
+    bleFailsafeActive = false;
+    logTrace("INFO", "FS", "control recovered after timeout");
   }
 }
 

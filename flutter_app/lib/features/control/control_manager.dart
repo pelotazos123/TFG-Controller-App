@@ -37,6 +37,7 @@ class ControlManager extends ChangeNotifier {
   ControlTransport? _transport;
   Timer? _sendTimer;
   bool _lastKnownConnected = false;
+  bool _isConnecting = false;
   int _lastSendMs = 0;
   int _currentTickMs = 0;
   bool _lastInputActive = false;
@@ -67,6 +68,7 @@ class ControlManager extends ChangeNotifier {
 
   bool get reverseSteering => _reverseSteering;
   bool get reverseThrottle => _reverseThrottle;
+  bool get isConnecting => _isConnecting;
 
   void setDriveScale(double value) {
     final clamped = value.clamp(0.2, 1.0);
@@ -99,6 +101,7 @@ class ControlManager extends ChangeNotifier {
     _stopTimer();
     _lastSendMs = 0;
     _lastInputActive = false;
+    _isConnecting = false;
     _transport = transport;
     _lastKnownConnected = transport.isConnected;
     _terminalSub = transport.terminalEvents.listen(_recordTerminalEvent);
@@ -108,11 +111,14 @@ class ControlManager extends ChangeNotifier {
   Future<void> connect() async {
     final current = _transport;
     if (current == null) return;
-    await current.connect();
-    _lastKnownConnected = current.isConnected;
-
-    _startTimer();
-    notifyListeners();
+    _setConnecting(true);
+    try {
+      await current.connect();
+      _lastKnownConnected = current.isConnected;
+      _startTimer();
+    } finally {
+      _setConnecting(false);
+    }
   }
 
   void disconnect() {
@@ -124,6 +130,7 @@ class ControlManager extends ChangeNotifier {
     _lastSendMs = 0;
     _lastInputActive = false;
     _activeMotion = null;
+    _isConnecting = false;
     notifyListeners();
   }
 
@@ -131,6 +138,12 @@ class ControlManager extends ChangeNotifier {
     _stopTimer();
     _lastSendMs = 0;
     _lastInputActive = false;
+  }
+
+  void _setConnecting(bool value) {
+    if (_isConnecting == value) return;
+    _isConnecting = value;
+    notifyListeners();
   }
 
   void sendJoystick(double tx, double ty, double sx) {

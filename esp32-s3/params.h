@@ -131,7 +131,7 @@ extern const unsigned long TIMEOUT_MS = 200;
 extern const unsigned long FAILSAFE_MS = 300;
 extern const unsigned long MODE_FALLBACK_MS = 45000;
 extern const unsigned long MODE_CHANGE_TIMEOUT_MS = 30000;
-extern const unsigned long WIFI_AP_RETURN_TO_BLE_MS = 12000;
+extern const unsigned long WIFI_AP_RETURN_TO_BLE_MS = 30000;
 
 // ========= Joystick =========
 extern float tx;

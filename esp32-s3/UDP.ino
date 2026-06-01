@@ -9,6 +9,8 @@ float tx = 0, ty = 0, sx = 0, sy = 0;
 IPAddress controlEndpointIp;
 uint16_t controlEndpointPort = 0;
 bool hasControlEndpoint = false;
+IPAddress lastPacketIp;
+uint16_t lastPacketPort = 0;
 static unsigned long udpSessionStartMs = 0;
 static unsigned long udpPacketCount = 0;
 static unsigned long udpHelloCount = 0;
@@ -28,8 +30,8 @@ namespace {
       "UDP",
       "rx %d bytes from %s:%u",
       packetSize,
-      udp.remoteIP().toString().c_str(),
-      udp.remotePort()
+      lastPacketIp.toString().c_str(),
+      lastPacketPort
     );
   }
 
@@ -79,12 +81,11 @@ namespace {
     ack["server_ms"] = millis();
     char out[64];
     const size_t outLen = serializeJson(ack, out, sizeof(out));
-    udp.beginPacket(udp.remoteIP(), udp.remotePort());
+    udp.beginPacket(lastPacketIp, lastPacketPort);
     udp.write((uint8_t*)out, outLen);
     udp.endPacket();
 
     udpHelloAckCount++;
-    logUdpPayload("TX", out, outLen);
     logTrace(
       "INFO",
       "UDP",
@@ -169,14 +170,16 @@ void udpResetControlEndpoint() {
 }
 
 static void updateControlEndpoint() {
-  controlEndpointIp = udp.remoteIP();
-  controlEndpointPort = udp.remotePort();
+  controlEndpointIp = lastPacketIp;
+  controlEndpointPort = lastPacketPort;
   hasControlEndpoint = (controlEndpointPort != 0);
 }
 
 void UDPtransport() {
   int packetSize = 0;
   while ((packetSize = udp.parsePacket()) > 0) {
+    lastPacketIp = udp.remoteIP();
+    lastPacketPort = udp.remotePort();
     logUdpRx(packetSize);
     udpPacketCount++;
 

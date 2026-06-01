@@ -206,7 +206,9 @@ class UdpTransport implements ControlTransport {
 
       _healthCheckInProgress = true;
       try {
-        final stillBound = await NetworkBindingService.isWifiBound();
+        final stillBound = await NetworkBindingService.isWifiBound(
+          targetHost: ip,
+        );
         if (!stillBound && _initialized) {
           disconnect();
         }
