@@ -3,7 +3,7 @@
 #include "esp_system.h"
 
 Mode currentMode = MODE_NONE;
-Mode mainMode = MODE_WIFI_AP;
+Mode mainMode = MODE_BLE;
 static unsigned long lastModeActiveMs = 0;
 static const unsigned long MODE_RECOVERY_MS = 3000;
 bool modeChangePending = false;

@@ -35,8 +35,8 @@ class _SettingsPageState extends State<SettingsPage> {
   final ControlManager _controlManager = ControlManager.instance;
   final SettingsManager _settingsManager = SettingsManager();
 
-  ControllerMode _mainMode = ControllerMode.wifiAp;
-  ControllerMode _connectionMode = ControllerMode.wifiAp;
+  ControllerMode _mainMode = ControllerMode.ble;
+  ControllerMode _connectionMode = ControllerMode.ble;
   ControllerMode? _activeMode;
   double _driveScale = 1.0;
   bool _reverseThrottle = false;

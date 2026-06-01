@@ -66,7 +66,7 @@ class SettingsManager extends ChangeNotifier {
       case 'ble':
         return ControllerMode.ble;
       default:
-        return ControllerMode.wifiAp;
+        return ControllerMode.ble;
     }
   }
 

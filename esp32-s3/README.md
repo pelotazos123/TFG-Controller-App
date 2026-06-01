@@ -51,7 +51,7 @@ In esp32-s3.ino, choose one startup mode in setup():
 - AP mode (default): activateWIFI_AP();
 - BLE mode: activateBLE();
 
-Current default is AP mode.
+Current default is BLE mode.
 
 ### 3.2 AP mode defaults
 Defined in wifi_ap.ino:
