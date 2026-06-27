@@ -167,7 +167,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 void setupBLE() {
-  ensureBleStackInitialized("ESP32-BLE");
+  ensureBleStackInitialized(BLE_DEVICE_NAME);
   if (bleInitialized) {
     if (bleAdvertising != nullptr) {
       bleAdvertising->start();

@@ -69,6 +69,9 @@ const int REAR_ENB = 35;   // PWM for rear-right
 const char AP_SSID[] = "ESP32_RC";
 const char AP_PASS[] = "123456789";
 
+// ========= BLE =========
+const char BLE_DEVICE_NAME[] = "ESP32-BLE";
+
 // ========= UDP =========
 extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
