@@ -98,7 +98,7 @@ flutter_launcher_icons:
     generate: true
     image_path: assets/icons/final-logo-amplified.png
   image_path: assets/icons/final-logo-amplified.png
-  min_sdk_android: 21
+  min_sdk_android: 31
 
   # To add assets to your application, add an assets section, like this:
   # assets:
