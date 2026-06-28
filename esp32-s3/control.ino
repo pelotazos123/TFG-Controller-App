@@ -1,11 +1,6 @@
 #include "params.h"
 #include <math.h>
 
-static float cmdFrontLeft = 0.0f;
-static float cmdFrontRight = 0.0f;
-static float cmdRearLeft = 0.0f;
-static float cmdRearRight = 0.0f;
-static unsigned long lastControlMs = 0;
 static unsigned long lastMotorTraceMs = 0;
 
 static void setL298Motor(
@@ -17,29 +12,17 @@ static void setL298Motor(
 	int minDuty
 );
 
-static float slewToward(float current, float target, float maxDelta);
-
 static float clamp(float v, float minV, float maxV) {
 	if (v > maxV) return maxV;
 	if (v < minV) return minV;
 	return v;
 }
 
-
 static float movementPower(float value) {
 	float mag = clamp(fabs(value), 0.0f, 1.0f);
 	if (mag == 0.0f) return 0.0f;
 	return MIN_EFFECTIVE_POWER + (1.0f - MIN_EFFECTIVE_POWER) * mag;
 }
-
-static float applyStartBoost(float v, float startCmd) {
-	float mag = fabs(v);
-	if (mag > 0.0f && mag < startCmd) {
-		return copysign(startCmd, v);
-	}
-	return v;
-}
-
 
 static WheelTargets scaledTargets(
 	float baseFrontLeft,
@@ -62,14 +45,6 @@ static WheelTargets applyWheelPolarity(WheelTargets targets) {
 	targets.frontRight *= DIR_FRONT_RIGHT;
 	targets.rearLeft *= DIR_REAR_LEFT;
 	targets.rearRight *= DIR_REAR_RIGHT;
-	return targets;
-}
-
-static WheelTargets applyStartBoost(WheelTargets targets) {
-	targets.frontLeft = applyStartBoost(targets.frontLeft, START_CMD_ALL);
-	targets.frontRight = applyStartBoost(targets.frontRight, START_CMD_ALL);
-	targets.rearLeft = applyStartBoost(targets.rearLeft, START_CMD_ALL);
-	targets.rearRight = applyStartBoost(targets.rearRight, START_CMD_ALL);
 	return targets;
 }
 
@@ -125,33 +100,11 @@ static WheelTargets resolveDirectionToTargets(const DirectionVector& vector) {
 	return scaledTargets(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-static float computeMaxSlewDelta(unsigned long nowMs) {
-	float dt = (float)(nowMs - lastControlMs) / 1000.0f;
-	lastControlMs = nowMs;
-	if (dt < 0.0f) dt = 0.0f;
-	if (dt > 0.10f) dt = 0.10f;
-	return MOTOR_SLEW_RATE_PER_SEC * dt;
-}
-
-static void applySlewToCurrentCommand(const WheelTargets& targets, float maxDelta) {
-	cmdFrontLeft = slewToward(cmdFrontLeft, targets.frontLeft, maxDelta);
-	cmdFrontRight = slewToward(cmdFrontRight, targets.frontRight, maxDelta);
-	cmdRearLeft = slewToward(cmdRearLeft, targets.rearLeft, maxDelta);
-	cmdRearRight = slewToward(cmdRearRight, targets.rearRight, maxDelta);
-}
-
-static void writeMotorOutputs() {
-	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, cmdFrontLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, cmdFrontRight, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, cmdRearLeft, START_CMD_ALL, MIN_DUTY_ALL);
-	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, cmdRearRight, START_CMD_ALL, MIN_DUTY_ALL);
-}
-
-static float slewToward(float current, float target, float maxDelta) {
-	float delta = target - current;
-	if (delta > maxDelta) return current + maxDelta;
-	if (delta < -maxDelta) return current - maxDelta;
-	return target;
+static void writeMotorOutputs(const WheelTargets& targets) {
+	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, targets.frontLeft,  START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, targets.frontRight, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN1,  REAR_IN2,  REAR_ENA,  targets.rearLeft,   START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN3,  REAR_IN4,  REAR_ENB,  targets.rearRight,  START_CMD_ALL, MIN_DUTY_ALL);
 }
 
 // Set L298N motor: in1/in2 for direction, pwmPin for speed.
@@ -174,17 +127,11 @@ static void setL298Motor(
 	}
 
 	if (speed > 0.0f) {
-		// Forward
 		digitalWrite(in1, HIGH);
 		digitalWrite(in2, LOW);
-	} else if (speed < 0.0f) {
-		// Reverse
+	} else {
 		digitalWrite(in1, LOW);
 		digitalWrite(in2, HIGH);
-	} else {
-		// Brake (both LOW = coast, both HIGH = brake)
-		digitalWrite(in1, LOW);
-		digitalWrite(in2, LOW);
 	}
 
 	float scaled = (mag - startCmd) / (1.0f - startCmd);
@@ -212,16 +159,10 @@ void controlSetup() {
   	ledcAttach(REAR_ENB, PWM_FREQ, PWM_RES);
 
 	// Stop all motors initially
-	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, 0, START_CMD_ALL, MIN_DUTY_ALL);   // Front-left
-	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, 0, START_CMD_ALL, MIN_DUTY_ALL);   // Front-right
-	setL298Motor(REAR_IN1, REAR_IN2, REAR_ENA, 0, START_CMD_ALL, MIN_DUTY_ALL);      // Rear-left
-	setL298Motor(REAR_IN3, REAR_IN4, REAR_ENB, 0, START_CMD_ALL, MIN_DUTY_ALL);      // Rear-right
-
-	cmdFrontLeft = 0.0f;
-	cmdFrontRight = 0.0f;
-	cmdRearLeft = 0.0f;
-	cmdRearRight = 0.0f;
-	lastControlMs = millis();
+	setL298Motor(FRONT_IN1, FRONT_IN2, FRONT_ENA, 0, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(FRONT_IN3, FRONT_IN4, FRONT_ENB, 0, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN1,  REAR_IN2,  REAR_ENA,  0, START_CMD_ALL, MIN_DUTY_ALL);
+	setL298Motor(REAR_IN3,  REAR_IN4,  REAR_ENB,  0, START_CMD_ALL, MIN_DUTY_ALL);
 }
 
 static WheelTargets applyDriveScale(WheelTargets targets) {
@@ -236,27 +177,22 @@ void controlUpdate() {
 	const DirectionVector direction = readInputVector();
 	WheelTargets targets = resolveDirectionToTargets(direction);
 	targets = applyWheelPolarity(targets);
-	targets = applyStartBoost(targets);
 	targets = applyDriveScale(targets);
-
-	const float maxDelta = computeMaxSlewDelta(millis());
-	applySlewToCurrentCommand(targets, maxDelta);
-	writeMotorOutputs();
+	writeMotorOutputs(targets);
 
 	if (LOG_CONTROL_PACKETS && millis() - lastMotorTraceMs >= 300) {
 		logTrace(
 			"INFO",
 			"MOTOR",
-			"intent tx=%.2f ty=%.2f sx=%.2f sy=%.2f slew=%.3f applied FL=%.2f FR=%.2f RL=%.2f RR=%.2f",
+			"intent tx=%.2f ty=%.2f sx=%.2f sy=%.2f FL=%.2f FR=%.2f RL=%.2f RR=%.2f",
 			tx,
 			ty,
 			sx,
 			sy,
-			maxDelta,
-			cmdFrontLeft,
-			cmdFrontRight,
-			cmdRearLeft,
-			cmdRearRight
+			targets.frontLeft,
+			targets.frontRight,
+			targets.rearLeft,
+			targets.rearRight
 		);
 		lastMotorTraceMs = millis();
 	}

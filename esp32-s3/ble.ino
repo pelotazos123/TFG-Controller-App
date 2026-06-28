@@ -29,6 +29,7 @@ static bool bleFailsafeActive = false;
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer*) override {
     deviceConnected = true;
+    lastBlePacketMs = millis();
     noteModeActivity(MODE_BLE);
     if (LOG_TRANSPORT_ENDPOINTS) {
       logTrace("INFO", "BLE", "client connected");
@@ -111,7 +112,13 @@ void broadcastTrace(const char* level, const char* tag, const char* message) {
 }
 
 static void applyBleFailsafe() {
-  if (millis() - lastBlePacketMs > FAILSAFE_MS) {
+  if (!deviceConnected) {
+    tx = ty = sx = sy = 0.0f;
+    bleFailsafeActive = false;
+    return;
+  }
+
+  if (millis() - lastBlePacketMs > BLE_FAILSAFE_MS) {
     tx = ty = sx = sy = 0.0f;
     if (!bleFailsafeActive) {
       bleFailsafeActive = true;

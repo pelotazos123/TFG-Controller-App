@@ -13,16 +13,12 @@ const IPAddress SOFTAP_LOCAL_IP(192, 168, 4, 1);
 const IPAddress SOFTAP_GATEWAY(192, 168, 4, 1);
 const IPAddress SOFTAP_SUBNET(255, 255, 255, 0);
 
-// ========= Motor control tuning (defaults) =========
-// These parameters control PWM, slew-rate, start thresholds and polarity.
-
 // PWM config
 const int PWM_FREQ = 1000;
 const int PWM_RES = 8;  // 0-255
 const int PWM_MAX = (1 << PWM_RES) - 1;
 
 // Drive behavior
-const float MOTOR_SLEW_RATE_PER_SEC = 10.0f; // full-scale units per second
 const float STRAFE_INPUT_SIGN = -1.0f;
 const float THROTTLE_INPUT_SIGN = -1.0f;
 
@@ -130,8 +126,8 @@ static inline void logTrace(const char* level, const char* tag, const char* fmt,
 }
 
 // ========= Timing =========
-extern const unsigned long TIMEOUT_MS = 200;
 extern const unsigned long FAILSAFE_MS = 300;
+extern const unsigned long BLE_FAILSAFE_MS = 700;
 extern const unsigned long MODE_FALLBACK_MS = 45000;
 extern const unsigned long MODE_CHANGE_TIMEOUT_MS = 30000;
 extern const unsigned long WIFI_AP_RETURN_TO_BLE_MS = 30000;
