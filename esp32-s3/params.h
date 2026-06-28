@@ -83,8 +83,8 @@ constexpr size_t JSON_MAX_SSID_LEN = 32;
 constexpr size_t JSON_MAX_PASS_LEN = 64;
 constexpr size_t JSON_MAX_MODE_LEN = 8;
 
-// Control packet: type + tx/ty/sx/sy.
-constexpr size_t JSON_CONTROL_CAPACITY = JSON_OBJECT_SIZE(5) + 32;
+// Control packet: type + tx/ty/sx/sy + ds.
+constexpr size_t JSON_CONTROL_CAPACITY = JSON_OBJECT_SIZE(6) + 40;
 // Mode packet: type + mode + ssid + pass.
 constexpr size_t JSON_MODE_CAPACITY =
   JSON_OBJECT_SIZE(4) + JSON_MAX_MODE_LEN + JSON_MAX_SSID_LEN + JSON_MAX_PASS_LEN + 24;
@@ -141,6 +141,7 @@ extern float tx;
 extern float ty;
 extern float sx;
 extern float sy;
+extern float driveScale;
 
 enum Mode {
   MODE_NONE,

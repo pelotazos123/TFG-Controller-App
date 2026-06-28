@@ -219,12 +219,12 @@ class UdpTransport implements ControlTransport {
   }
 
   @override
-  void send({required double tx, required double ty, required double sx, required double sy}) {
+  void send({required double tx, required double ty, required double sx, required double sy, required double driveScale}) {
     if (!_hasSendEndpoint) {
       return;
     }
 
-    final payload = buildControlPayload(tx, ty, sx, sy);
+    final payload = buildControlPayload(tx, ty, sx, sy, driveScale);
     try {
       _socket!.send(utf8.encode(payload), _targetAddress!, _targetPort!);
     } on SocketException {

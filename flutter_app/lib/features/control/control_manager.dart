@@ -71,7 +71,7 @@ class ControlManager extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
 
   void setDriveScale(double value) {
-    final clamped = value.clamp(0.2, 1.0);
+    final clamped = value.clamp(0.5, 1.0);
     if (_driveScale == clamped) return;
     _driveScale = clamped;
     notifyListeners();
@@ -228,7 +228,7 @@ class ControlManager extends ChangeNotifier {
     _lastSendMs = nowMs;
     _lastInputActive = isActiveInput;
 
-    current.send(tx: output.tx, ty: 0.0, sx: output.sx, sy: output.sy);
+    current.send(tx: output.tx, ty: 0.0, sx: output.sx, sy: output.sy, driveScale: _driveScale);
   }
 
   ControlOutput _resolveCurrentOutput() {
@@ -236,8 +236,7 @@ class ControlManager extends ChangeNotifier {
       ? _resolveMotionCommandOutput(_activeMotion!, _activeMotionPower)
       : ControlOutput(tx: _tx, sy: _ty, sx: _sx);
 
-    final withDirectionPreferences = _applyDirectionPreferences(baseOutput);
-    return _applyDriveScale(withDirectionPreferences);
+    return _applyDirectionPreferences(baseOutput);
   }
 
   ControlOutput _resolveMotionCommandOutput(MotionCommand command, double power) {
@@ -267,19 +266,12 @@ class ControlManager extends ChangeNotifier {
 
   ControlOutput _applyDirectionPreferences(ControlOutput output) {
     return ControlOutput(
-      tx: _reverseSteering ? -output.tx : output.tx,
+      tx: _reverseThrottle ? -output.tx : output.tx,
       sy: _reverseThrottle ? -output.sy : output.sy,
-      sx: output.sx,
+      sx: _reverseSteering ? -output.sx : output.sx,
     );
   }
 
-  ControlOutput _applyDriveScale(ControlOutput output) {
-    return ControlOutput(
-      tx: (output.tx * _driveScale).clamp(-1.0, 1.0).toDouble(),
-      sy: (output.sy * _driveScale).clamp(-1.0, 1.0).toDouble(),
-      sx: (output.sx * _driveScale).clamp(-1.0, 1.0).toDouble(),
-    );
-  }
 
   bool _isActiveInput(ControlOutput output) {
     return _activeMotion != null ||

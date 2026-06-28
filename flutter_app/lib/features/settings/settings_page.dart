@@ -79,7 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _driveScale = _controlManager.driveScale;
+    _driveScale = _internalToDisplay(_controlManager.driveScale);
     _reverseSteering = _controlManager.reverseSteering;
     _reverseThrottle = _controlManager.reverseThrottle;
 
@@ -101,6 +101,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _portController.dispose();
     super.dispose();
   }
+
+  static double _displayToInternal(double display) =>
+      0.5 + (display - 0.2) / 0.8 * 0.5;
+
+  static double _internalToDisplay(double internal) =>
+      0.2 + (internal - 0.5) / 0.5 * 0.8;
 
   Future<void> _loadMainMode() async {
     final resolved = await _settingsManager.loadMainMode(_mainMode);
@@ -705,7 +711,7 @@ class _SettingsPageState extends State<SettingsPage> {
           label: localizations?.maxDriveSpeed ?? 'Max Drive Speed',
           onChanged: (value) {
             setState(() => _driveScale = value);
-            _controlManager.setDriveScale(value);
+            _controlManager.setDriveScale(_displayToInternal(value));
           },
               semanticFormatterCallback: (double value) =>
                 '${(value * 100).toStringAsFixed(0)}%',

@@ -11,6 +11,7 @@ namespace {
   const char* const KEY_TY = "ty";
   const char* const KEY_SX = "sx";
   const char* const KEY_SY = "sy";
+  const char* const KEY_DS = "ds";
 
   bool isMessageType(const char* msgType, const char* expected) {
     return (msgType != nullptr) && (strcmp(msgType, expected) == 0);
@@ -119,6 +120,10 @@ bool applyControlPacket(JsonDocument& doc, unsigned long& lastPacketMs) {
   ty = doc[KEY_TY] | 0.0;
   sx = doc[KEY_SX] | 0.0;
   sy = doc[KEY_SY] | 0.0;
+  float ds = doc[KEY_DS] | 1.0f;
+  if (ds < 0.0f) ds = 0.0f;
+  if (ds > 1.0f) ds = 1.0f;
+  driveScale = ds;
   lastPacketMs = millis();
   return true;
 }

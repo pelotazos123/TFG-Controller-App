@@ -7,7 +7,7 @@ abstract class ControlTransport {
 
   Future<void> connect();
   void disconnect();
-  void send({required double tx, required double ty, required double sx, required double sy});
+  void send({required double tx, required double ty, required double sx, required double sy, required double driveScale});
   Future<void> sendTerminalCommand(String command);
   Future<void> sendModeCommand(
     ControllerMode mode, {

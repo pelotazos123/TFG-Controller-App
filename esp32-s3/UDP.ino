@@ -4,7 +4,6 @@ unsigned long lastPacketMs = 0;
 WiFiUDP udp;
 
 char packetBuffer[256];
-float tx = 0, ty = 0, sx = 0, sy = 0;
 
 IPAddress controlEndpointIp;
 uint16_t controlEndpointPort = 0;

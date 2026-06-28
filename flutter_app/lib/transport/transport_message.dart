@@ -51,13 +51,14 @@ TransportEvent? parseTransportEvent(dynamic decoded) {
   }
 }
 
-String buildControlPayload(double tx, double ty, double sx, double sy) {
+String buildControlPayload(double tx, double ty, double sx, double sy, double driveScale) {
   return jsonEncode({
     'type': 'control',
     'tx': tx,
     'ty': ty,
     'sx': sx,
     'sy': sy,
+    'ds': driveScale,
   });
 }
 

@@ -32,8 +32,9 @@ class FakeTransport implements ControlTransport {
     required double ty,
     required double sx,
     required double sy,
+    required double driveScale,
   }) {
-    sent.add({'tx': tx, 'ty': ty, 'sx': sx, 'sy': sy});
+    sent.add({'tx': tx, 'ty': ty, 'sx': sx, 'sy': sy, 'ds': driveScale});
   }
 
   @override
@@ -70,7 +71,7 @@ void main() {
     expect(manager.driveScale, 1.0);
 
     manager.setDriveScale(0.0);
-    expect(manager.driveScale, 0.2);
+    expect(manager.driveScale, 0.5);
 
     manager.setDriveScale(0.6);
     expect(manager.driveScale, 0.6);
@@ -91,7 +92,7 @@ void main() {
     expect(sent['sy'], closeTo(-0.7, 0.0001));
   });
 
-  test('sendJoystick applies scaling and reverse flags', () {
+  test('sendJoystick applies reverse flags and passes driveScale to transport', () {
     final transport = FakeTransport();
     manager.setTransport(transport);
     manager.setDriveScale(0.5);
@@ -102,10 +103,13 @@ void main() {
 
     expect(transport.sent, hasLength(1));
     final sent = transport.sent.single;
-    expect(sent['tx'], closeTo(-0.4, 0.0001));
+    // reverseThrottle inverts tx and sy; reverseSteering inverts sx
+    // driveScale is forwarded to firmware, not applied in app
+    expect(sent['tx'], closeTo(-0.8, 0.0001));
     expect(sent['ty'], closeTo(0.0, 0.0001));
-    expect(sent['sx'], closeTo(0.3, 0.0001));
-    expect(sent['sy'], closeTo(0.2, 0.0001));
+    expect(sent['sx'], closeTo(-0.6, 0.0001));
+    expect(sent['sy'], closeTo(0.4, 0.0001));
+    expect(sent['ds'], closeTo(0.5, 0.0001));
   });
 
   test('motion commands override joystick input', () {

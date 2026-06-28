@@ -224,13 +224,20 @@ void controlSetup() {
 	lastControlMs = millis();
 }
 
-// Omnidirectional (mecanum/X-drive style) control:
-// tx = strafe, sy = forward/backward, sx = rotation
+static WheelTargets applyDriveScale(WheelTargets targets) {
+	targets.frontLeft  *= driveScale;
+	targets.frontRight *= driveScale;
+	targets.rearLeft   *= driveScale;
+	targets.rearRight  *= driveScale;
+	return targets;
+}
+
 void controlUpdate() {
 	const DirectionVector direction = readInputVector();
 	WheelTargets targets = resolveDirectionToTargets(direction);
 	targets = applyWheelPolarity(targets);
 	targets = applyStartBoost(targets);
+	targets = applyDriveScale(targets);
 
 	const float maxDelta = computeMaxSlewDelta(millis());
 	applySlewToCurrentCommand(targets, maxDelta);

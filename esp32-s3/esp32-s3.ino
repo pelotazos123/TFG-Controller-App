@@ -4,6 +4,9 @@
 
 Mode currentMode = MODE_NONE;
 Mode mainMode = MODE_BLE;
+
+float tx = 0.0f, ty = 0.0f, sx = 0.0f, sy = 0.0f;
+float driveScale = 1.0f;
 static unsigned long lastModeActiveMs = 0;
 static const unsigned long MODE_RECOVERY_MS = 3000;
 bool modeChangePending = false;

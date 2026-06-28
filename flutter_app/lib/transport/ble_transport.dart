@@ -183,9 +183,10 @@ class BleTransport implements ControlTransport {
     required double ty,
     required double sx,
     required double sy,
+    required double driveScale,
   }) {
     if (!_canSend) return;
-    final payload = buildControlPayload(tx, ty, sx, sy);
+    final payload = buildControlPayload(tx, ty, sx, sy, driveScale);
     _writePayload(payload, withoutResponse: true, errorContext: 'send');
   }
 
