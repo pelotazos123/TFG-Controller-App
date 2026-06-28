@@ -82,32 +82,18 @@ class UdpTransport implements ControlTransport {
 
             try {
               final decoded = jsonDecode(raw);
-              final pkt = parseIncomingPacket(decoded);
-              if (pkt != null) {
-                if (pkt.type == 'hello_ack') {
+              final event = parseTransportEvent(decoded);
+              if (event != null) {
+                if (event.type == 'hello_ack') {
                   _targetAddress = dg.address;
                   _targetPort = dg.port;
-                  _terminalEvents.add(
-                    parseTransportEvent(decoded) ??
-                        TransportEvent(
-                          type: 'hello_ack',
-                          data: Map<String, dynamic>.from(decoded),
-                          receivedAt: DateTime.now(),
-                        ),
-                  );
+                  _terminalEvents.add(event);
                   if (!completer.isCompleted) completer.complete();
                   return;
                 }
 
-                if (pkt.type == 'log' || pkt.type == 'terminal') {
-                  _terminalEvents.add(
-                    parseTransportEvent(decoded) ??
-                        TransportEvent(
-                          type: pkt.type,
-                          data: Map<String, dynamic>.from(decoded),
-                          receivedAt: DateTime.now(),
-                        ),
-                  );
+                if (event.type == 'log' || event.type == 'terminal') {
+                  _terminalEvents.add(event);
                   continue;
                 }
               }

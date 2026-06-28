@@ -13,7 +13,6 @@ bool modeChangePending = false;
 Mode pendingMode = MODE_NONE;
 unsigned long modeChangeStartMs = 0;
 unsigned long modeChangeDeadlineMs = 0;
-unsigned long modeTransitionHoldUntilMs = 0;
 
 static void forceMotorsOff() {
   pinMode(FRONT_IN1, OUTPUT);

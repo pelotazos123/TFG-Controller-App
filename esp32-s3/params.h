@@ -73,7 +73,6 @@ const char AP_PASS[] = "123456789";
 const char BLE_DEVICE_NAME[] = "ESP32-BLE";
 
 // ========= UDP =========
-extern WiFiUDP udp;
 extern const int UDP_PORT = 4210;
 void udpResetControlEndpoint();
 
@@ -103,6 +102,7 @@ const bool LOG_CONTROL_PACKETS = true;
 class BLECharacteristic;
 extern WiFiUDP udp;
 extern IPAddress controlEndpointIp;
+
 extern uint16_t controlEndpointPort;
 extern bool hasControlEndpoint;
 extern BLECharacteristic* pTxCharacteristic;
@@ -165,13 +165,10 @@ struct DirectionVector {
   float rotate;
 };
 
-extern Mode currentMode;
-extern Mode mainMode;
 extern bool modeChangePending;
 extern Mode pendingMode;
 extern unsigned long modeChangeStartMs;
 extern unsigned long modeChangeDeadlineMs;
-extern unsigned long modeTransitionHoldUntilMs;
 extern bool deviceConnected;
 void applyPendingModeChange();
 
@@ -182,7 +179,7 @@ void stopBLE();
 void activateMainMode();
 void activateFallbackMode();
 void requestModeChange(const char* modeValue, const char* ssid, const char* pass);
-void requestMainModeChange(const char* modeValue, const char* ssid, const char* pass);
+void requestMainModeChange(const char* modeValue);
 void noteModeActivity(Mode mode);
 
 // ========= BLE stack =========

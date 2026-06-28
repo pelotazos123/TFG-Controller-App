@@ -142,17 +142,10 @@ class BleTransport implements ControlTransport {
     if (raw == null || !_looksLikeJson(raw)) return;
     try {
       final decoded = jsonDecode(raw);
-      final pkt = parseIncomingPacket(decoded);
-      if (pkt != null) {
-        if (pkt.type == 'log' || pkt.type == 'terminal' || pkt.type == 'hello_ack') {
-          _terminalEvents.add(
-            parseTransportEvent(decoded) ??
-                TransportEvent(
-                  type: pkt.type,
-                  data: Map<String, dynamic>.from(decoded),
-                  receivedAt: DateTime.now(),
-                ),
-          );
+      final event = parseTransportEvent(decoded);
+      if (event != null) {
+        if (event.type == 'log' || event.type == 'terminal' || event.type == 'hello_ack') {
+          _terminalEvents.add(event);
         }
       }
     } catch (error) {

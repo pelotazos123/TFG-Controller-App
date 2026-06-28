@@ -35,7 +35,7 @@ namespace {
     readModePayload(doc, modeValue, ssid, pass);
 
     if (asMainMode) {
-      requestMainModeChange(modeValue, ssid, pass);
+      requestMainModeChange(modeValue);
     } else {
       requestModeChange(modeValue, ssid, pass);
     }

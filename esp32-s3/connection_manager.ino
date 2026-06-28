@@ -28,7 +28,7 @@ void requestModeChange(const char* modeValue, const char* ssid, const char* pass
     : MODE_CHANGE_TIMEOUT_MS);
 }
 
-void requestMainModeChange(const char* modeValue, const char* ssid, const char* pass) {
+void requestMainModeChange(const char* modeValue) {
   Mode nextMode = MODE_NONE;
   if (!parseModeValue(modeValue, nextMode)) return;
 

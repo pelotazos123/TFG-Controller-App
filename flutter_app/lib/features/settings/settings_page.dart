@@ -630,11 +630,11 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mode == ControllerMode.wifiAp) {
       final ip = _ipController.text.trim();
       final portText = _portController.text.trim();
-      final ipError = _validateIp(ip, localizations);
+      final ipError = _settingsManager.validateIp(ip, localizations);
       if (ipError != null) {
         throw Exception(ipError);
       }
-      final portError = _validatePort(portText, localizations);
+      final portError = _settingsManager.validatePort(portText, localizations);
       if (portError != null) {
         throw Exception(portError);
       }
@@ -677,14 +677,6 @@ class _SettingsPageState extends State<SettingsPage> {
         await Future<void>.delayed(const Duration(seconds: 2));
       }
     }
-  }
-
-  String? _validateIp(String ip, AppLocalizations? localizations) {
-    return _settingsManager.validateIp(ip, localizations);
-  }
-
-  String? _validatePort(String portText, AppLocalizations? localizations) {
-    return _settingsManager.validatePort(portText, localizations);
   }
 
   Widget _buildControlSection() {

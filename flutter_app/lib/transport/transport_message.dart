@@ -62,30 +62,6 @@ String buildControlPayload(double tx, double ty, double sx, double sy, double dr
   });
 }
 
-class IncomingPacket {
-  final String type;
-  final Map<String, dynamic> data;
-
-  IncomingPacket({required this.type, required this.data});
-}
-
-/// Attempts to parse a decoded JSON value into an [IncomingPacket].
-/// Returns `null` if the value is not a Map or doesn't contain a string `type`.
-IncomingPacket? parseIncomingPacket(dynamic decoded) {
-  if (decoded is Map) {
-    final t = decoded['type'];
-    if (t is String) {
-      try {
-        final map = Map<String, dynamic>.from(decoded);
-        return IncomingPacket(type: t, data: map);
-      } catch (_) {
-        // Fall through to return null on cast failures.
-      }
-    }
-  }
-  return null;
-}
-
 int _toInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.round();

@@ -18,7 +18,6 @@ static unsigned long lastBleActivityMs = 0;
 static unsigned long lastBleDisconnectMs = 0;
 static unsigned long bleModeStartMs = 0;
 static unsigned long bleSessionRxCount = 0;
-static unsigned long bleSessionTxCount = 0;
 static unsigned long bleSessionMalformedCount = 0;
 static const unsigned long BLE_WIFI_RETURN_MS = 1200;
 static bool bleFailsafeActive = false;
@@ -44,10 +43,9 @@ class MyServerCallbacks : public BLEServerCallbacks {
     logTrace(
       "INFO",
       "SESSION",
-      "BLE session duration=%lums rx=%lu tx=%lu malformed=%lu",
+      "BLE session duration=%lums rx=%lu malformed=%lu",
       (unsigned long)(millis() - bleModeStartMs),
       bleSessionRxCount,
-      bleSessionTxCount,
       bleSessionMalformedCount
     );
     delay(100);
@@ -237,9 +235,7 @@ void activateBLE() {
   lastBlePacketMs = 0;
   lastBleActivityMs = 0;
   lastBleDisconnectMs = 0;
-  modeTransitionHoldUntilMs = millis() + 5000UL;
   bleSessionRxCount = 0;
-  bleSessionTxCount = 0;
   bleSessionMalformedCount = 0;
 
   currentMode = MODE_BLE;

@@ -15,7 +15,6 @@ class TerminalPage extends StatefulWidget {
 
 class _TerminalPageState extends State<TerminalPage> {
   final ControlManager _controlManager = ControlManager.instance;
-  final TextEditingController _commandController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<TransportEvent> _entries = [];
   final List<TransportEvent> _pendingEntries = [];
@@ -40,7 +39,6 @@ class _TerminalPageState extends State<TerminalPage> {
   void dispose() {
     _controlManager.removeListener(_handleTransportChanged);
     _eventSubscription?.cancel();
-    _commandController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
