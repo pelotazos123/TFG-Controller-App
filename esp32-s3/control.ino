@@ -3,6 +3,44 @@
 
 static unsigned long lastMotorTraceMs = 0;
 
+
+static WheelTargets slewedTargets = {0.0f, 0.0f, 0.0f, 0.0f};
+static unsigned long lastSlewMs = 0;
+static unsigned long coastUntil[4] = {0, 0, 0, 0}; // FL, FR, RL, RR
+
+static float stepTowardsCoasted(float current, float target, float maxStep, unsigned long& coastUntilMs) {
+	unsigned long now = millis();
+
+	// Reversal: both sides outside the dead zone and in opposite directions.
+	bool reversal = (current >  START_CMD_ALL && target < -START_CMD_ALL) ||
+	                (current < -START_CMD_ALL && target >  START_CMD_ALL);
+
+	if (reversal && coastUntilMs == 0) {
+		coastUntilMs = now + COAST_MS;
+	}
+	if (coastUntilMs != 0) {
+		if (now < coastUntilMs) return 0.0f;
+		coastUntilMs = 0;
+	}
+
+	float delta = target - current;
+	if (fabs(delta) <= maxStep) return target;
+	return current + (delta > 0.0f ? maxStep : -maxStep);
+}
+
+static WheelTargets applySlew(const WheelTargets& target) {
+	unsigned long now = millis();
+	float dt = (lastSlewMs == 0) ? 0.0f : (float)(now - lastSlewMs);
+	lastSlewMs = now;
+	float maxStep = SLEW_RATE_PER_MS * dt;
+
+	slewedTargets.frontLeft  = stepTowardsCoasted(slewedTargets.frontLeft,  target.frontLeft,  maxStep, coastUntil[0]);
+	slewedTargets.frontRight = stepTowardsCoasted(slewedTargets.frontRight, target.frontRight, maxStep, coastUntil[1]);
+	slewedTargets.rearLeft   = stepTowardsCoasted(slewedTargets.rearLeft,   target.rearLeft,   maxStep, coastUntil[2]);
+	slewedTargets.rearRight  = stepTowardsCoasted(slewedTargets.rearRight,  target.rearRight,  maxStep, coastUntil[3]);
+	return slewedTargets;
+}
+
 static void setL298Motor(
 	int in1,
 	int in2,
@@ -178,6 +216,7 @@ void controlUpdate() {
 	WheelTargets targets = resolveDirectionToTargets(direction);
 	targets = applyWheelPolarity(targets);
 	targets = applyDriveScale(targets);
+	targets = applySlew(targets);
 	writeMotorOutputs(targets);
 
 	if (LOG_CONTROL_PACKETS && millis() - lastMotorTraceMs >= 300) {

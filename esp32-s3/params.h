@@ -32,6 +32,14 @@ const float START_CMD_ALL = 0.20f;
 // Minimum PWM duty to apply when motor commanded (0..PWM_MAX)
 const int MIN_DUTY_ALL = 80;
 
+// Maximum speed change per wheel per millisecond (slew rate limiter).
+// 0.008/ms → full reversal (-1 to +1) takes ~250 ms.
+const float SLEW_RATE_PER_MS = 0.008f;
+
+// Time in ms to hold a wheel at zero when a direction reversal is detected.
+// Lets the motor spin down before reversing, avoiding back-EMF current spikes.
+const unsigned long COAST_MS = 80;
+
 // Motor polarity calibration. Set to -1.0 to invert a wheel.
 const float DIR_FRONT_LEFT = 1.0f;
 const float DIR_FRONT_RIGHT = 1.0f;
