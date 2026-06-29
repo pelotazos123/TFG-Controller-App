@@ -8,10 +8,12 @@ import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 import 'package:flutter_rccontroller_app/transport/transport_message.dart';
 
 class BleTransport implements ControlTransport {
-  static const String deviceName = 'ESP32-BLE';
+  final String deviceName;
   static final Guid serviceUuid = Guid('6E400001-B5A3-F393-E0A9-E50E24DCCA9E');
   static final Guid rxUuid = Guid('6E400002-B5A3-F393-E0A9-E50E24DCCA9E');
   static final Guid txUuid = Guid('6E400003-B5A3-F393-E0A9-E50E24DCCA9E');
+
+  BleTransport({this.deviceName = 'ESP32-BLE'});
 
   BluetoothDevice? _device;
   BluetoothCharacteristic? _rxChar;

@@ -31,6 +31,9 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _portController = TextEditingController(
     text: '4210',
   );
+  final TextEditingController _bleDeviceNameController = TextEditingController(
+    text: 'ESP32-BLE',
+  );
 
   final ControlManager _controlManager = ControlManager.instance;
   final SettingsManager _settingsManager = SettingsManager();
@@ -99,6 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _ipController.dispose();
     _portController.dispose();
+    _bleDeviceNameController.dispose();
     super.dispose();
   }
 
@@ -290,6 +294,19 @@ class _SettingsPageState extends State<SettingsPage> {
             await _setMainMode(_connectionMode);
           },
         ),
+        if (_connectionMode == ControllerMode.ble) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: _bleDeviceNameController,
+              decoration: const InputDecoration(
+                labelText: 'BLE Device Name',
+                border: OutlineInputBorder(),
+                hintText: 'ESP32-BLE',
+              ),
+            ),
+          ),
+        ],
         if (_connectionMode == ControllerMode.wifiAp) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -656,7 +673,10 @@ class _SettingsPageState extends State<SettingsPage> {
       _controlManager.disconnect();
     }
 
-    final transport = BleTransport();
+    final deviceName = _bleDeviceNameController.text.trim();
+    final transport = BleTransport(
+      deviceName: deviceName.isEmpty ? 'ESP32-BLE' : deviceName,
+    );
     _controlManager.setTransport(transport);
     await _connectWithRetry(transport);
     await transport.sendModeCommand(mode);

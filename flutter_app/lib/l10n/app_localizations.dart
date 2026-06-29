@@ -281,25 +281,25 @@ abstract class AppLocalizations {
   /// No description provided for @reverseStrafeX.
   ///
   /// In en, this message translates to:
-  /// **'Reverse Strafe (X)'**
+  /// **'Reverse Rotation'**
   String get reverseStrafeX;
 
   /// No description provided for @leftJoystickHorizontalAxis.
   ///
   /// In en, this message translates to:
-  /// **'Left joystick horizontal axis'**
+  /// **'Right joystick rotation'**
   String get leftJoystickHorizontalAxis;
 
   /// No description provided for @reverseForwardBackY.
   ///
   /// In en, this message translates to:
-  /// **'Reverse Forward/Back (Y)'**
+  /// **'Reverse cardinal movements'**
   String get reverseForwardBackY;
 
   /// No description provided for @leftJoystickVerticalAxis.
   ///
   /// In en, this message translates to:
-  /// **'Left joystick vertical axis'**
+  /// **'Left joystick movements'**
   String get leftJoystickVerticalAxis;
 
   /// No description provided for @appearance.

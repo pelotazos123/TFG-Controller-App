@@ -102,16 +102,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maxDriveSpeed => 'Max Drive Speed';
 
   @override
-  String get reverseStrafeX => 'Reverse Strafe (X)';
+  String get reverseStrafeX => 'Reverse Rotation';
 
   @override
-  String get leftJoystickHorizontalAxis => 'Left joystick horizontal axis';
+  String get leftJoystickHorizontalAxis => 'Right joystick rotation';
 
   @override
-  String get reverseForwardBackY => 'Reverse Forward/Back (Y)';
+  String get reverseForwardBackY => 'Reverse cardinal movements';
 
   @override
-  String get leftJoystickVerticalAxis => 'Left joystick vertical axis';
+  String get leftJoystickVerticalAxis => 'Left joystick movements';
 
   @override
   String get appearance => 'Appearance';
