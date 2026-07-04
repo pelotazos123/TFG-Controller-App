@@ -37,7 +37,8 @@ Rear driver (L298N #2):
 - Arduino IDE 2.x
 - ESP32 board package (Espressif)
 - Libraries:
-	- ArduinoJson
+	- ArduinoJson (external dependency)
+	- WiFi, WiFiUdp, Preferences, BLEDevice, BLEServer, BLEUtils, BLE2902, BLESecurity, Arduino.h, and esp_system.h from the ESP32 core
 
 Notes:
 - WiFi and BLE headers used by this project come from the ESP32 core.

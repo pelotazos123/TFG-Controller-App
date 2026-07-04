@@ -1,6 +1,6 @@
-# RC Controller App (TFG Controller App)
+# RControllerAPP
 
-Cross-platform Flutter application to control an ESP32-based remote device (RC controller) developed as part of a university project.
+Cross-platform Flutter application to control an ESP32-based remote device.
 
 ## Table of contents
 
@@ -20,6 +20,18 @@ Cross-platform Flutter application to control an ESP32-based remote device (RC c
 - Real-time remote control UI for an ESP32 device (BLE and UDP/Wi‑Fi transports).
 - Settings persistence across app restarts
 - Localization support (l10n)
+
+## Dependencies
+
+The app uses these packages from `pubspec.yaml`:
+
+- `flutter` and `flutter_localizations` from the Flutter SDK
+- `udp` for UDP control transport
+- `flutter_blue_plus` for BLE control
+- `android_intent_plus` for opening Android Bluetooth settings
+- `shared_preferences` for local settings persistence
+- `intl` for localization formatting
+- `cupertino_icons` for iOS-style icons
 
 ## Requirements
 
@@ -73,12 +85,17 @@ The firmware and ESP32-related sources live in the repository at `../esp32-s3` r
 - `lib/` — main Flutter application code
 	- `app.dart`, `main.dart` — app entrypoints
 	- `features/` — feature modules and UI
+	- `l10n/` — generated localization files
 	- `services/` — platform services, transport and connectivity logic
 	- `transport/` — serialization and transport helpers
-- `assets/` — images and icons used by the app
-- `test/` — unit and widget tests
+- `assets/` — app assets
+	- `icons/` — launcher and app icons
+- `android/`, `ios/`, `linux/`, `macos/`, `windows/` — platform projects
 - `integration_test/` — end-to-end tests
-- `ios/`, `android/`, `windows/` — platform projects
+- `test/` — unit and widget tests
+- `doc/api/` — generated API documentation for the Flutter app
+- `pubspec.yaml` — Flutter package and dependency configuration
+- `l10n.yaml` — localization generation configuration
 
 ## Testing
 
