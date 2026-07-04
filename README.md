@@ -84,6 +84,7 @@ The ESP32-S3 side handles:
 
 ## Documentation
 
+- API Documentation (GitHub Pages): https://pelotazos123.github.io/TFG-Controller-App/
 - Flutter app details: [flutter_app/README.md](flutter_app/README.md)
 - ESP32 firmware details: [esp32-s3/README.md](esp32-s3/README.md)
 
