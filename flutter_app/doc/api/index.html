@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="flutter_rccontroller_app API docs, for the Dart programming language.">
+  <title>flutter_rccontroller_app - Dart API docs</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="static-assets/github.css?v1">
+  <link rel="stylesheet" href="static-assets/styles.css?v1">
+  <link rel="icon" href="static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li class="self-crumb">flutter_rccontroller_app package</li>
+  </ol>
+  <div class="self-name">flutter_rccontroller_app</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+  <div id="dartdoc-main-content" class="main-content">
+      
+<section class="desc markdown">
+  <h1 id="rcontrollerapp">RControllerAPP</h1>
+<p>Cross-platform Flutter application to control an ESP32-based remote device.</p>
+<h2 id="table-of-contents">Table of contents</h2>
+<ul>
+<li>Features</li>
+<li>Requirements</li>
+<li>Quick start</li>
+<li>Running on a device</li>
+<li>Building release packages</li>
+<li>ESP32 firmware (integration)</li>
+<li>Project structure</li>
+<li>Testing</li>
+<li>Contributing</li>
+<li>License</li>
+</ul>
+<h2 id="features">Features</h2>
+<ul>
+<li>Real-time remote control UI for an ESP32 device (BLE and UDP/Wi‑Fi transports).</li>
+<li>Settings persistence across app restarts</li>
+<li>Localization support (l10n)</li>
+</ul>
+<h2 id="dependencies">Dependencies</h2>
+<p>The app uses these packages from <code>pubspec.yaml</code>:</p>
+<ul>
+<li><code>flutter</code> and <code>flutter_localizations</code> from the Flutter SDK</li>
+<li><code>udp</code> for UDP control transport</li>
+<li><code>flutter_blue_plus</code> for BLE control</li>
+<li><code>android_intent_plus</code> for opening Android Bluetooth settings</li>
+<li><code>shared_preferences</code> for local settings persistence</li>
+<li><code>intl</code> for localization formatting</li>
+<li><code>cupertino_icons</code> for iOS-style icons</li>
+</ul>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>Flutter (stable) — see <a href="https://flutter.dev">https://flutter.dev</a> for install instructions</li>
+<li>Android SDK for building Android packages</li>
+<li>A supported device or emulator (Android) for running the app</li>
+<li>To integrate with hardware: Arduino/PlatformIO toolchain for flashing the ESP32-S3 firmware</li>
+</ul>
+<h2 id="quick-start">Quick start</h2>
+<ol>
+<li>Open a terminal in the <code>flutter_app</code> folder.</li>
+<li>Install Dart/Flutter dependencies:</li>
+</ol>
+<pre class="language-bash"><code class="language-bash">flutter pub get
+</code></pre>
+<ol start="3">
+<li>Run the app on the connected device or emulator:</li>
+</ol>
+<pre class="language-bash"><code class="language-bash">flutter run -d &lt;device-id&gt;
+</code></pre>
+<p>Replace <code>&lt;device-id&gt;</code> with the output of <code>flutter devices</code> or omit to use the default device.</p>
+<h2 id="running-on-a-device">Running on a device</h2>
+<ul>
+<li>Android: connect a device or start an emulator and run <code>flutter run</code>.</li>
+</ul>
+<h2 id="building-release-packages">Building release packages</h2>
+<ul>
+<li>Android APK / AAB:</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">flutter build apk --release
+flutter build appbundle --release
+</code></pre>
+<p>Follow platform-specific signing steps in upstream Flutter docs when preparing app store releases.</p>
+<h2 id="esp32-firmware-integration">ESP32 firmware (integration)</h2>
+<p>The firmware and ESP32-related sources live in the repository at <code>../esp32-s3</code> relative to this folder. To flash the device:</p>
+<ul>
+<li>Open the <code>esp32-s3</code> folder with Arduino IDE or PlatformIO.</li>
+<li>Select the appropriate board (ESP32-S3) and the correct serial/port.</li>
+<li>Build and upload to the device. The firmware implements the BLE, UDP and transport logic the app communicates with.</li>
+</ul>
+<h2 id="project-structure">Project structure</h2>
+<ul>
+<li><code>lib/</code> — main Flutter application code
+<ul>
+<li><code>app.dart</code>, <code>main.dart</code> — app entrypoints</li>
+<li><code>features/</code> — feature modules and UI</li>
+<li><code>l10n/</code> — generated localization files</li>
+<li><code>services/</code> — platform services, transport and connectivity logic</li>
+<li><code>transport/</code> — serialization and transport helpers</li>
+</ul>
+</li>
+<li><code>assets/</code> — app assets
+<ul>
+<li><code>icons/</code> — launcher and app icons</li>
+</ul>
+</li>
+<li><code>android/</code>, <code>ios/</code>, <code>linux/</code>, <code>macos/</code>, <code>windows/</code> — platform projects</li>
+<li><code>integration_test/</code> — end-to-end tests</li>
+<li><code>test/</code> — unit and widget tests</li>
+<li><code>doc/api/</code> — generated API documentation for the Flutter app</li>
+<li><code>pubspec.yaml</code> — Flutter package and dependency configuration</li>
+<li><code>l10n.yaml</code> — localization generation configuration</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p>Run unit and widget tests with:</p>
+<pre class="language-bash"><code class="language-bash">flutter test
+</code></pre>
+<p>Run integration tests (requires a running device/emulator):</p>
+<pre class="language-bash"><code class="language-bash">flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_flow_test.dart
+</code></pre>
+</section>
+
+
+      <section class="summary">
+          <h2>Libraries</h2>
+        <dl>
+          <dt id="app">
+  <span class="name"><a href="app/">app</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="control_manager">
+  <span class="name"><a href="features_control_control_manager/">features\control\control_manager</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="control_page">
+  <span class="name"><a href="features_control_control_page/">features\control\control_page</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="settings_manager">
+  <span class="name"><a href="features_settings_settings_manager/">features\settings\settings_manager</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="settings_page">
+  <span class="name"><a href="features_settings_settings_page/">features\settings\settings_page</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="terminal_page">
+  <span class="name"><a href="features_terminal_terminal_page/">features\terminal\terminal_page</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="app_localizations">
+  <span class="name"><a href="l10n_app_localizations/">l10n\app_localizations</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="app_localizations_en">
+  <span class="name"><a href="l10n_app_localizations_en/">l10n\app_localizations_en</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="app_localizations_es">
+  <span class="name"><a href="l10n_app_localizations_es/">l10n\app_localizations_es</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="locale_provider">
+  <span class="name"><a href="locale_provider/">locale_provider</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="main">
+  <span class="name"><a href="main/">main</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="network_binding_service">
+  <span class="name"><a href="services_network_binding_service/">services\network_binding_service</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="theme_provider">
+  <span class="name"><a href="theme_provider/">theme_provider</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="ble_transport">
+  <span class="name"><a href="transport_ble_transport/">transport\ble_transport</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="control_transport">
+  <span class="name"><a href="transport_control_transport/">transport\control_transport</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="controller_protocol">
+  <span class="name"><a href="transport_controller_protocol/">transport\controller_protocol</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="transport_message">
+  <span class="name"><a href="transport_transport_message/">transport\transport_message</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="udp_transport">
+  <span class="name"><a href="transport_udp_transport/">transport\udp_transport</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+        </dl>
+      </section>
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li class="self-crumb">flutter_rccontroller_app package</li>
+</ol>
+
+    <h5 class="hidden-xs"><span class="package-name">flutter_rccontroller_app</span> <span class="package-kind">package</span></h5>
+    <ol>
+      <li class="section-title">Libraries</li>
+      <li><a href="app/">app</a></li>
+      <li><a href="features_control_control_manager/">features\control\control_manager</a></li>
+      <li><a href="features_control_control_page/">features\control\control_page</a></li>
+      <li><a href="features_settings_settings_manager/">features\settings\settings_manager</a></li>
+      <li><a href="features_settings_settings_page/">features\settings\settings_page</a></li>
+      <li><a href="features_terminal_terminal_page/">features\terminal\terminal_page</a></li>
+      <li><a href="l10n_app_localizations/">l10n\app_localizations</a></li>
+      <li><a href="l10n_app_localizations_en/">l10n\app_localizations_en</a></li>
+      <li><a href="l10n_app_localizations_es/">l10n\app_localizations_es</a></li>
+      <li><a href="locale_provider/">locale_provider</a></li>
+      <li><a href="main/">main</a></li>
+      <li><a href="services_network_binding_service/">services\network_binding_service</a></li>
+      <li><a href="theme_provider/">theme_provider</a></li>
+      <li><a href="transport_ble_transport/">transport\ble_transport</a></li>
+      <li><a href="transport_control_transport/">transport\control_transport</a></li>
+      <li><a href="transport_controller_protocol/">transport\controller_protocol</a></li>
+      <li><a href="transport_transport_message/">transport\transport_message</a></li>
+      <li><a href="transport_udp_transport/">transport\udp_transport</a></li>
+</ol>
+
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div>
+</main>
+<footer>
+  <span class="no-break">
+    flutter_rccontroller_app
+      1.0.0+1
+  </span>
+  
+</footer>
+
+
+<script src="static-assets/highlight.pack.js?v1"></script>
+<script src="static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

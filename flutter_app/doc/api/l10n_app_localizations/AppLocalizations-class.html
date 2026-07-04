@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the AppLocalizations class from the app_localizations library, for the Dart programming language.">
+  <title>AppLocalizations class - app_localizations library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../static-assets/styles.css?v1">
+  <link rel="icon" href="../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../index.html">flutter_rccontroller_app</a></li>
+    <li><a href="../l10n_app_localizations/">l10n\app_localizations.dart</a></li>
+    <li class="self-crumb">AppLocalizations class</li>
+  </ol>
+  <div class="self-name">AppLocalizations</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+<div
+    id="dartdoc-main-content"
+    class="main-content"
+    data-above-sidebar="l10n_app_localizations&#47;l10n_app_localizations-library-sidebar.html"
+    data-below-sidebar="l10n_app_localizations&#47;AppLocalizations-class-sidebar.html">
+    <div>
+<h1><span class="kind-class">AppLocalizations</span> class 
+    <a href="https://dart.dev/language/class-modifiers#abstract" class="feature feature-abstract" title="This type can not be directly constructed.">abstract</a>
+ 
+</h1></div>
+
+    
+<section class="desc markdown">
+  <p>Callers can lookup localized strings with an instance of AppLocalizations
+returned by <code>AppLocalizations.of(context)</code>.</p>
+<p>Applications need to include <code>AppLocalizations.delegate()</code> in their app's
+<code>localizationDelegates</code> list, and the locales they support in the app's
+<code>supportedLocales</code> list. For example:</p>
+<pre class="language-dart"><code class="language-dart">import 'l10n/app_localizations.dart';
+
+return MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: MyApplicationHome(),
+);
+</code></pre>
+<h2 id="update-pubspecyaml">Update pubspec.yaml</h2>
+<p>Please make sure to update your pubspec.yaml to include the following
+packages:</p>
+<pre class="language-yaml"><code class="language-yaml">dependencies:
+  # Internationalization support.
+  flutter_localizations:
+    sdk: flutter
+  intl: any # Use the pinned version from flutter_localizations
+
+  # Rest of dependencies
+</code></pre>
+<h2 id="ios-applications">iOS Applications</h2>
+<p>iOS applications define key application metadata, including supported
+locales, in an Info.plist file that is built into the application bundle.
+To configure the locales supported by your app, you’ll need to edit this
+file.</p>
+<p>First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+Then, in the Project Navigator, open the Info.plist file under the Runner
+project’s Runner folder.</p>
+<p>Next, select the Information Property List item, select Add Item from the
+Editor menu, then select Localizations from the pop-up menu.</p>
+<p>Select and expand the newly-created Localizations item then, for each
+locale your application supports, add a new item and select the locale
+you wish to add from the pop-up menu in the Value field. This list should
+be consistent with the languages listed in the AppLocalizations.supportedLocales
+property.</p>
+</section>
+
+
+    <section>
+      <dl class="dl-horizontal">
+        
+
+        
+        
+
+          <dt>Implementers</dt>
+          <dd><ul class="comma-separated clazz-relationships">
+              <li><a href="../l10n_app_localizations_en/AppLocalizationsEn-class.html">AppLocalizationsEn</a></li>
+              <li><a href="../l10n_app_localizations_es/AppLocalizationsEs-class.html">AppLocalizationsEs</a></li>
+          </ul></dd>
+
+        
+        
+
+
+      </dl>
+    </section>
+
+    
+  <section class="summary offset-anchor" id="constructors">
+    <h2>Constructors</h2>
+    <dl class="constructor-summary-list">
+        <dt id="AppLocalizations.new" class="callable">
+          <span class="name"><a href="../l10n_app_localizations/AppLocalizations/AppLocalizations.html">AppLocalizations</a></span><span class="signature">(<span class="parameter" id="-param-locale"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">locale</span></span>)</span>
+        </dt>
+        <dd>
+          
+        </dd>
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor"
+      id="instance-properties">
+    <h2>Properties</h2>
+    <dl class="properties">
+        <dt id="about" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/about.html">about</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @about.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="appearance" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/appearance.html">appearance</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @appearance.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="appName" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/appName.html">appName</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @appName.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="back" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/back.html">back</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @back.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="bluetooth" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/bluetooth.html">bluetooth</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @bluetooth.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="bluetoothLe" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/bluetoothLe.html">bluetoothLe</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @bluetoothLe.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="bluetoothOpenSettings" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/bluetoothOpenSettings.html">bluetoothOpenSettings</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @bluetoothOpenSettings.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="bluetoothReminderBody" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/bluetoothReminderBody.html">bluetoothReminderBody</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @bluetoothReminderBody.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="changeMode" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/changeMode.html">changeMode</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @changeMode.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connect" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connect.html">connect</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connect.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connected" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connected.html">connected</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connected.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connectFirstToSwitch" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connectFirstToSwitch.html">connectFirstToSwitch</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connectFirstToSwitch.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connecting" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connecting.html">connecting</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connecting.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connection" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connection.html">connection</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connection.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connectionLost" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connectionLost.html">connectionLost</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connectionLost.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="connectionType" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/connectionType.html">connectionType</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @connectionType.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="controlSettings" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/controlSettings.html">controlSettings</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @controlSettings.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="dark" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/dark.html">dark</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @dark.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="developer" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/developer.html">developer</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @developer.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="disconnect" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/disconnect.html">disconnect</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @disconnect.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="disconnected" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/disconnected.html">disconnected</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @disconnected.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="driveWheels" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/driveWheels.html">driveWheels</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @driveWheels.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="english" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/english.html">english</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @english.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="esp32IpAddress" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/esp32IpAddress.html">esp32IpAddress</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @esp32IpAddress.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="failedToConnectUdp" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/failedToConnectUdp.html">failedToConnectUdp</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @failedToConnectUdp.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="fourWheels" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/fourWheels.html">fourWheels</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @fourWheels.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="hardware" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/hardware.html">hardware</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @hardware.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="hashCode" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/hashCode.html">hashCode</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  The hash code for this object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="hideMovementMatrix" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/hideMovementMatrix.html">hideMovementMatrix</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @hideMovementMatrix.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="invalidIpAddress" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/invalidIpAddress.html">invalidIpAddress</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @invalidIpAddress.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="invalidPort" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/invalidPort.html">invalidPort</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @invalidPort.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="language" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/language.html">language</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @language.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="leftJoystickHorizontalAxis" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/leftJoystickHorizontalAxis.html">leftJoystickHorizontalAxis</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @leftJoystickHorizontalAxis.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="leftJoystickVerticalAxis" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/leftJoystickVerticalAxis.html">leftJoystickVerticalAxis</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @leftJoystickVerticalAxis.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="light" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/light.html">light</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @light.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="localeName" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/localeName.html">localeName</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="lockRotation" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/lockRotation.html">lockRotation</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @lockRotation.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="mainMode" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/mainMode.html">mainMode</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @mainMode.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="mainModeDescription" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/mainModeDescription.html">mainModeDescription</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @mainModeDescription.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="maxDriveSpeed" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/maxDriveSpeed.html">maxDriveSpeed</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @maxDriveSpeed.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveBackward" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveBackward.html">moveBackward</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveBackward.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveBackwardLeft" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveBackwardLeft.html">moveBackwardLeft</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveBackwardLeft.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveBackwardRight" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveBackwardRight.html">moveBackwardRight</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveBackwardRight.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveForward" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveForward.html">moveForward</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveForward.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveForwardLeft" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveForwardLeft.html">moveForwardLeft</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveForwardLeft.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveForwardRight" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveForwardRight.html">moveForwardRight</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveForwardRight.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveLeft" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveLeft.html">moveLeft</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveLeft.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="movementMatrix" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/movementMatrix.html">movementMatrix</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @movementMatrix.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="moveRight" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/moveRight.html">moveRight</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @moveRight.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="ok" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/ok.html">ok</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @ok.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="organization" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/organization.html">organization</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @organization.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="pleaseEnterEsp32Ip" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/pleaseEnterEsp32Ip.html">pleaseEnterEsp32Ip</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @pleaseEnterEsp32Ip.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="port" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/port.html">port</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @port.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="rememberThis" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/rememberThis.html">rememberThis</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @rememberThis.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="reverseForwardBackY" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/reverseForwardBackY.html">reverseForwardBackY</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @reverseForwardBackY.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="reverseStrafeX" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/reverseStrafeX.html">reverseStrafeX</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @reverseStrafeX.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="rotateLeftCmd" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/rotateLeftCmd.html">rotateLeftCmd</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @rotateLeftCmd.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="rotateRightCmd" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/rotateRightCmd.html">rotateRightCmd</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @rotateRightCmd.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="rotation" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/rotation.html">rotation</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @rotation.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="runtimeType" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/runtimeType.html">runtimeType</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Type-class.html">Type</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  A representation of the runtime type of the object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="send" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/send.html">send</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @send.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="settings" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/settings.html">settings</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @settings.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="showMovementMatrix" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/showMovementMatrix.html">showMovementMatrix</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @showMovementMatrix.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="spanish" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/spanish.html">spanish</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @spanish.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="system" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/system.html">system</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @system.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="terminalAutoscroll" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/terminalAutoscroll.html">terminalAutoscroll</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @terminalAutoscroll.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="terminalCommand" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/terminalCommand.html">terminalCommand</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @terminalCommand.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="terminalCommandHint" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/terminalCommandHint.html">terminalCommandHint</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @terminalCommandHint.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="terminalNoTraffic" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/terminalNoTraffic.html">terminalNoTraffic</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @terminalNoTraffic.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="terminalTitle" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/terminalTitle.html">terminalTitle</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @terminalTitle.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="theme" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/theme.html">theme</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @theme.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="translation" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/translation.html">translation</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @translation.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="twoWheels" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/twoWheels.html">twoWheels</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @twoWheels.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="udpConnected" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/udpConnected.html">udpConnected</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @udpConnected.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="udpConnectTimeout" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/udpConnectTimeout.html">udpConnectTimeout</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @udpConnectTimeout.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="unlockRotation" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/unlockRotation.html">unlockRotation</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @unlockRotation.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="useMecanumWheels" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/useMecanumWheels.html">useMecanumWheels</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @useMecanumWheels.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="version" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/version.html">version</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @version.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="wifi" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/wifi.html">wifi</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @wifi.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="wifiAp" class="property">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/wifiAp.html">wifiAp</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  No description provided for @wifiAp.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+
+    
+  <section
+      class="summary offset-anchor inherited"
+      id="instance-methods">
+    <h2>Methods</h2>
+    <dl class="callables">
+        <dt id="noSuchMethod" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/noSuchMethod.html">noSuchMethod</a></span><span class="signature">(<wbr><span class="parameter" id="noSuchMethod-param-invocation"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Invocation-class.html">Invocation</a></span> <span class="parameter-name">invocation</span></span>)
+    <span class="returntype parameter">&#8594; dynamic</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Invoked when a nonexistent method or property is accessed.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="toString" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/toString.html">toString</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  A string representation of this object.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor inherited"
+      id="operators">
+    <h2>Operators</h2>
+    <dl class="callables">
+        <dt id="operator ==" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/operator_equals.html">operator ==</a></span><span class="signature">(<wbr><span class="parameter" id="==-param-other"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Object-class.html">Object</a></span> <span class="parameter-name">other</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  The equality operator.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+    
+    
+  <section class="summary offset-anchor" id="static-methods">
+    <h2>Static Methods</h2>
+    <dl class="callables">
+        <dt id="of" class="callable">
+  <span class="name"><a href="../l10n_app_localizations/AppLocalizations/of.html">of</a></span><span class="signature">(<wbr><span class="parameter" id="of-param-context"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/widgets/BuildContext-class.html">BuildContext</a></span> <span class="parameter-name">context</span></span>)
+    <span class="returntype parameter">&#8594; <a href="../l10n_app_localizations/AppLocalizations-class.html">AppLocalizations</a>?</span>
+  </span>
+  
+
+</dt>
+<dd>
+  
+  
+
+</dd>
+
+    </dl>
+  </section>
+    
+
+  <section class="summary offset-anchor" id="constants">
+    <h2>Constants</h2>
+    <dl class="properties">
+        <dt id="delegate" class="constant">
+    <span class="name "><a href="../l10n_app_localizations/AppLocalizations/delegate-constant.html">delegate</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/widgets/LocalizationsDelegate-class.html">LocalizationsDelegate</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../l10n_app_localizations/AppLocalizations-class.html">AppLocalizations</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  
+  
+
+</dd>
+
+        <dt id="localizationsDelegates" class="constant">
+    <span class="name "><a href="../l10n_app_localizations/AppLocalizations/localizationsDelegates-constant.html">localizationsDelegates</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/widgets/LocalizationsDelegate-class.html">LocalizationsDelegate</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  A list of this localizations delegate along with the default localizations
+delegates.
+  
+
+</dd>
+
+        <dt id="supportedLocales" class="constant">
+    <span class="name "><a href="../l10n_app_localizations/AppLocalizations/supportedLocales-constant.html">supportedLocales</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-ui/Locale-class.html">Locale</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  A list of this localizations delegate's supported locales.
+  
+
+</dd>
+
+    </dl>
+  </section>
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../index.html">flutter_rccontroller_app</a></li>
+    <li><a href="../l10n_app_localizations/">app_localizations</a></li>
+    <li class="self-crumb">AppLocalizations class</li>
+</ol>
+
+    <h5>app_localizations library</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    flutter_rccontroller_app
+      1.0.0+1
+  </span>
+  
+</footer>
+
+
+<script src="../static-assets/highlight.pack.js?v1"></script>
+<script src="../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+
