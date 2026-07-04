@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_rccontroller_app/features/control/control_manager.dart';
 import 'package:flutter_rccontroller_app/l10n/app_localizations.dart';
 import 'package:flutter_rccontroller_app/transport/ble_transport.dart';
@@ -47,6 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _skipBluetoothReminder = false;
   int _driveWheels = 4;
   bool _mecanumWheels = true;
+  String _appVersion = '...';
 
   bool _isConnecting = false;
 
@@ -90,6 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadBluetoothReminderPreference();
     _loadDriveWheelsPreference();
     _loadMecanumPreference();
+    _loadAppVersion();
 
     final active = _resolveActiveMode(_controlManager.transport);
     if (active != null) {
@@ -149,6 +152,15 @@ class _SettingsPageState extends State<SettingsPage> {
     final mech = await _settingsManager.loadMecanumPreference();
     if (!mounted) return;
     setState(() => _mecanumWheels = mech);
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    final versionText = packageInfo.buildNumber.isEmpty
+        ? packageInfo.version
+        : '${packageInfo.version}+${packageInfo.buildNumber}';
+    setState(() => _appVersion = versionText);
   }
 
   Future<void> _persistMecanumPreference(bool value) async {
@@ -851,7 +863,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _buildAboutTile(
           icon: Icons.tag,
           title: localizations?.version ?? 'Version',
-          subtitle: '1.0.0',
+          subtitle: _appVersion,
         ),
         _buildAboutTile(
           icon: Icons.memory,
