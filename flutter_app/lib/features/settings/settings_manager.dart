@@ -49,7 +49,7 @@ class SettingsManager extends ChangeNotifier {
 
   Future<bool> loadMecanumPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(mecanumKey) ?? false;
+    return prefs.getBool(mecanumKey) ?? true;
   }
 
   Future<void> persistMecanumPreference(bool value) async {

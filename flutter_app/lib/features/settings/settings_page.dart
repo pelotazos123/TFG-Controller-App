@@ -46,7 +46,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _reverseSteering = false;
   bool _skipBluetoothReminder = false;
   int _driveWheels = 4;
-  bool _mecanumWheels = false;
+  bool _mecanumWheels = true;
 
   bool _isConnecting = false;
 

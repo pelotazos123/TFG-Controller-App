@@ -52,7 +52,7 @@ class _ControlPageState extends State<ControlPage> {
 
   final SettingsManager _settingsManager = SettingsManager();
   int _driveWheels = 4;
-  bool _mecanumWheels = false;
+  bool _mecanumWheels = true;
 
   @override
   void initState() {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_rccontroller_app/app.dart';
+import 'package:flutter_rccontroller_app/transport/controller_protocol.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -19,11 +20,24 @@ void main() {
     final hasSettingsTitle =
         find.text('Settings').evaluate().isNotEmpty ||
         find.text('Ajustes').evaluate().isNotEmpty;
-    final hasIpField =
-        find.text('ESP32 IP Address').evaluate().isNotEmpty ||
-        find.text('Dirección IP del ESP32').evaluate().isNotEmpty;
 
     expect(hasSettingsTitle, isTrue);
+
+    await tester.dragUntilVisible(
+      find.byType(DropdownButton<ControllerMode>),
+      find.byType(ListView),
+      const Offset(0, -300),
+    );
+
+    await tester.tap(find.byType(DropdownButton<ControllerMode>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('WiFi AP').last);
+    await tester.pumpAndSettle();
+
+    final hasIpField =
+      find.text('ESP32 IP Address').evaluate().isNotEmpty ||
+      find.text('Dirección IP del ESP32').evaluate().isNotEmpty;
+
     expect(hasIpField, isTrue);
 
     await tester.tap(find.byIcon(Icons.arrow_back));
